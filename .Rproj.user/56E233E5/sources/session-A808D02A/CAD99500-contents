@@ -1,0 +1,1101 @@
+
+# packages
+library(readxl)
+library(lubridate)
+library(ggplot2)
+library(dplyr)
+library(purrr)
+library(tidyverse)
+
+########################
+### CDEC Water Years ###
+########################
+WaterYr <- read_excel("C:/Users/Elizabeth.keller/Desktop/DCP/Drought data/CDEC Water Year Hydrologic Classification Indices.xlsx", 
+                      sheet = "Sheet3")
+
+################
+# DCP Ops data #
+################
+
+# data from DWR
+##############
+#DCP2016 <- read_excel("C:/Users/Elizabeth.keller/Desktop/DCP/Migration timing data/DCP Conceptual Data.xlsx",
+#                  sheet="2016")
+#DCP2018 <- read_excel("C:/Users/Elizabeth.keller/Desktop/DCP/Migration timing data/DCP Conceptual Data.xlsx",
+#                  sheet="2018")
+#DCP2019 <- read_excel("C:/Users/Elizabeth.keller/Desktop/DCP/Migration timing data/DCP Conceptual Data.xlsx",
+#                  sheet="2019")
+#DCP2020 <- read_excel("C:/Users/Elizabeth.keller/Desktop/DCP/Migration timing data/DCP Conceptual Data.xlsx",
+#                  sheet="2020")
+#DCP2021 <- read_excel("C:/Users/Elizabeth.keller/Desktop/DCP/Migration timing data/DCP Conceptual Data.xlsx",
+#                  sheet="2021")
+# lengths
+  # 2016 and 2020 were leap years = 366
+  # Why does 2021 have 366 days?? - 2 Sept 30 values - Why?
+
+plot(DCP2016$`Bypass Flow` ~ DCP2016$Date)
+##################
+# alternate read in of the DCP data all to one dataframe
+path <- "C:/Users/Elizabeth.keller/Desktop/DCP/Migration timing data/DCP Conceptual Data_data only.xlsx"
+
+DCP <- path %>%
+        excel_sheets() %>%
+        set_names() %>%
+       map_df(read_excel,
+           path = path,
+           .id = "Year")
+#str(DCP)
+
+###########################
+# working with DJFMP data #
+###########################
+# this data is to 2020
+# pull DJFMP data from the "EDI portal data.R" file
+
+###############################################
+# Trawl sites near the DCP intakes            #
+# closest is SR055M                           #
+# closer sites have not been sampled recently #
+###############################################
+
+# clip dt2 to station we want
+TrawlDCP <- dt2[dt2$StationCode=="SR055M",]
+# clip to years we want (WY 2008-present) & remove unwanted columns
+TrawlDCP <- TrawlDCP[year(TrawlDCP$SampleDate)>2006,c(3:7,14:16,25:28,33:34)]
+# create a variable to ID specific trawls
+TrawlDCP$Sample <- paste(TrawlDCP$StationCode,TrawlDCP$SampleDate,TrawlDCP$TowNumber)
+# Species = combine CommonName + RaceByLength to get species/run
+TrawlDCP$Species <- as.character(TrawlDCP$CommonName)
+TrawlDCP$Species[TrawlDCP$CommonName=="Chinook salmon"] <- paste(
+  TrawlDCP$RaceByLength[TrawlDCP$CommonName=="Chinook salmon"],"-run ",
+  "Chinook salmon",sep="")
+# need a species+sample variable
+TrawlDCP$SampleSpecies <- paste(TrawlDCP$Sample, TrawlDCP$Species)
+
+# sum counts that are the same trawl and species
+
+TrawlDCP_sum <- TrawlDCP %>%
+  group_by(SampleSpecies) %>%
+  dplyr::summarize(
+          Station = StationCode,
+          Date = SampleDate,
+          Method = MethodCode,
+          Volume = max(Volume), # some missing volumes
+          Sample = Sample,
+          Species = Species,
+          Catch_sum = sum(Count)
+          ) 
+# how I coded has duplicate rows
+# for now, just remove duplicate rows
+TrawlDCP_sum <- TrawlDCP_sum[!duplicated(TrawlDCP_sum),]
+
+#length(unique(paste(TrawlDCP$Sample,TrawlDCP$Species)))
+#length(unique(paste(TrawlDCP_sum$Sample,TrawlDCP_sum$Species)))
+
+### Create a separate dataframe with all unique samples and their info
+TrawlDCP_samples <- TrawlDCP %>%
+  group_by(Sample) %>%
+  dplyr::summarize(
+          Station = StationCode,
+          Date = SampleDate,
+          Method = MethodCode,
+          Volume = max(Volume), # some missing volumes
+          Sample = Sample) 
+#remove duplicate rows
+TrawlDCP_samples <- TrawlDCP_samples[!duplicated(TrawlDCP_samples),]
+length(unique(TrawlDCP$Sample))
+# need this whole df for every species
+# add Species & Catch_sum columns
+TrawlDCP_samples$Species <- character(length(TrawlDCP_samples$Sample))
+TrawlDCP_samples$Catch_sum <- 0
+
+# species to consider keeping
+  # "Fall-run Chinook salmon"
+  # "NA-run Chinook salmon"
+  # "Winter-run Chinook salmon" ****
+  # "steelhead trout" ****
+  # "LateFall-run Chinook salmon"
+  # "Spring-run Chinook salmon" ****
+  # "Adult-run Chinook salmon"
+
+samples1 <- TrawlDCP_samples
+samples1$Species <- "Winter-run Chinook salmon"
+samples2 <- TrawlDCP_samples
+samples2$Species <- "Spring-run Chinook salmon"
+samples3 <- TrawlDCP_samples
+samples3$Species <- "steelhead trout"
+
+# row for every trawl and species combo (for our 3 species) 
+# and adding the summary with numbers - only for our 3 species
+TrawlDCP_samples_all <- rbind(samples1, samples2, samples3,
+                              (TrawlDCP_sum[TrawlDCP_sum$Species %in% 
+                                              c("Winter-run Chinook salmon",
+                                         "Spring-run Chinook salmon",
+                                         "steelhead trout"),]))
+# need a sample+species variable
+TrawlDCP_samples_all$SampleSpecies <- paste(
+  TrawlDCP_samples_all$Sample,TrawlDCP_samples_all$Species)
+# we want just the max count rows (we want 0 when it's zero,
+  # but the catch number if there was catch for that trawl)
+TrawlDCP_samples_all_sum <- TrawlDCP_samples_all %>%
+  group_by(SampleSpecies) %>%
+  dplyr::summarize(
+          Station = Station,
+          Date = Date,
+          Method = Method,
+          Volume = (Volume), # some missing volumes
+          Sample = Sample,
+          Species = Species,
+          Catch_sum = max(Catch_sum)
+          ) 
+#remove duplicate rows
+TrawlDCP_samples_all_sum <-TrawlDCP_samples_all_sum[!duplicated(
+  TrawlDCP_samples_all_sum),]
+
+length(unique(TrawlDCP_samples_all_sum$Sample))
+length(paste(TrawlDCP_samples_all_sum$Sample,TrawlDCP_samples_all_sum$Species))
+
+# actually want one row PER DAY (not per trawl)
+# create a daye and species varable
+TrawlDCP_samples_all_sum$DateSpecies <- paste(TrawlDCP_samples_all_sum$Date,
+                                              TrawlDCP_samples_all_sum$Species)
+
+  # sum catch for the day (for each species)
+  # sum volume for the day
+
+TrawlDCP_summary <- TrawlDCP_samples_all_sum %>%
+  group_by(DateSpecies) %>%
+  dplyr::summarize(
+          Station = Station,
+          Date = Date,
+          Method = Method,
+          Volume = sum(Volume), # some missing volumes
+          Species = Species,
+          Catch_sum = sum(Catch_sum)
+          ) 
+#remove duplicate rows
+TrawlDCP_summary <-TrawlDCP_summary[!duplicated(
+  TrawlDCP_summary),]
+
+# remove all the df I made that we don't need now
+#remove(TrawlDCP_samples,TrawlDCP_samples_all,
+#       TrawlDCP_samples_all_sum,TrawlDCP_sum, 
+#       samples1, samples2, samples3)
+
+# calculate CPUE
+TrawlDCP_summary$CPUE <- TrawlDCP_summary$Catch_sum / 
+  TrawlDCP_summary$Volume
+
+# Add Water Year
+TrawlDCP_summary$WY <- year(TrawlDCP_summary$Date) + 
+  as.numeric(between(month(TrawlDCP_summary$Date),10,12))
+
+###############
+# Trawl Plots #
+###############
+
+# make dates both POSIXct
+TrawlDCP_summary$Date <- as.POSIXct(TrawlDCP_summary$Date)
+
+###########################
+# older out of date plots #
+###########################
+# Plotting CPUE along with NDD
+# late March, early April 2016 have NA for volume and therefore CPUE
+ggplot() +             # Create ggplot2 plot
+  geom_line(data=TrawlDCP_summary[TrawlDCP_summary$WY==2016,], # trawl CPUE data
+             aes(x=Date, y=CPUE, col = Species))+
+  geom_line(data=DCP2016, aes(x=Date, y=NDD/5000000))+ # DCP NDD data
+  scale_y_continuous(sec.axis = ~ .*5000000) # second axis - scale NDD to trawl CPUE
+
+# raw catch
+ggplot() +             # Create ggplot2 plot
+  geom_line(data=TrawlDCP_summary[TrawlDCP_summary$WY==2016,], # trawl data
+             aes(x=Date, y=Catch_sum, col = Species))+
+  geom_line(data=DCP2016, aes(x=Date, y=NDD/500))+ # DCP NDD data
+  geom_line(data=DCP2016, aes(x=Date, y=`Sac Flow`/500))+
+  scale_y_continuous(sec.axis = ~ .*500)+ # second axis - scale NDD to trawl CPUE
+  geom_rect(aes(xmin = DCP2016$Date, xmax = DCP2016$Date+1, 
+                 ymin = 0, ymax = 200, 
+                 fill = DCP2016$`NDD Level`, 
+                 show.legend = FALSE))
+
+
+# visualize pulse protections -- background color
+ggplot(DCP2016) + theme_bw()+
+  geom_line(aes(x=Date, y=`Sac Flow`))+ # Sac Flow
+  geom_line(aes(x=Date,y=NDD))+ # NDD flow
+  geom_tile(aes(x=Date,y=max(DCP2016$`Sac Flow`)/2,fill=as.factor(`NDD Level`)), # NDD Level as background color
+            height=max(DCP2016$`Sac Flow`),alpha=0.2) + 
+  scale_fill_manual("NDD Level", values=c("white","grey70","grey40","grey10"))+
+  geom_line(data=TrawlDCP_summary[TrawlDCP_summary$WY==2016,], # trawl data
+            aes(x=Date, y=Catch_sum*500, col = Species))+
+  scale_y_continuous(sec.axis = ~ ./500)+
+  labs(title="Daily raw catch at Sherwood Harbor trawl (SR055M) WY 2016", y="Flow")+
+  theme(legend.position="bottom", legend.box = "horizontal",legend.direction = "vertical")
+  dev.copy(svg,"C:/Users/Elizabeth.keller/Desktop/DCP/DCP_fishSR055M_2016.svg")
+  dev.off()
+
+###############################
+# let's try looping for plots #
+###############################
+  # what years do we have:
+  years <- c(2016,2018,2019,2020,2021)
+
+  
+
+for (i in 1:length(years)){ # i is location
+  year=noquote(years[i])
+  # need to wrap ggplot in print function for it to plot within the loop
+  print(
+    ggplot(DCP[DCP$Year==year,]) + theme_bw()+
+    geom_line(aes(x=Date, y=`Sac Flow`))+ # Sac Flow
+    geom_line(aes(x=Date,y=NDD))+ # NDD flow
+    geom_tile(aes(x=Date,y=max(DCP[DCP$Year==year,]$`Sac Flow`)/2,fill=as.factor(`NDD Level`)), # NDD Level as background color
+            height=max(DCP[DCP$Year==year,]$`Sac Flow`),alpha=0.2) + 
+    scale_fill_manual("NDD Level", values=c("white","grey70","grey40","grey10"))+
+    geom_line(data=TrawlDCP_summary[TrawlDCP_summary$WY==year,], # trawl data
+            aes(x=Date, y=Catch_sum*1000, col = Species))+
+    scale_y_continuous(sec.axis = ~ ./1000)+
+    labs(title=paste("Daily raw catch at Sherwood Harbor trawl WY ",year," (",WaterYr[WaterYr$WY==year,]$`Sac_Yr-type`,")",sep=""), y="Flow")+
+    theme(legend.position="bottom", legend.box = "horizontal",legend.direction = "vertical"))
+    dev.copy(svg,(paste("C:/Users/Elizabeth.keller/Desktop/DCP/Migration timing data/plots/DCP_fishSR055M_",year,".svg",sep="")))
+    dev.off()
+}  
+  
+# 2020 need to be scaled differently
+  # crazy winter-run spike in catch
+year=2020
+scale=100
+  ggplot(DCP[DCP$Year==year,]) + theme_bw()+
+  geom_line(aes(x=Date, y=`Sac Flow`))+ # Sac Flow
+  geom_line(aes(x=Date,y=NDD))+ # NDD flow
+  geom_tile(aes(x=Date,y=max(DCP[DCP$Year==year,]$`Sac Flow`)/2,fill=as.factor(`NDD Level`)), # NDD Level as background color
+            height=max(DCP[DCP$Year==year,]$`Sac Flow`),alpha=0.2) + 
+  scale_fill_manual("NDD Level", values=c("white","grey70","grey40","grey10"))+
+  geom_line(data=TrawlDCP_summary[TrawlDCP_summary$WY==2020,], # trawl data
+            aes(x=Date, y=Catch_sum*scale, col = Species))+
+  scale_y_continuous(sec.axis = ~ ./scale)+
+  labs(title=paste("Daily raw catch at Sherwood Harbor trawl WY 2020"," (",WaterYr[WaterYr$WY==year,]$`Sac_Yr-type`,")",sep=""), y="Flow")+
+  theme(legend.position="bottom", legend.box = "horizontal",legend.direction = "vertical")
+  dev.copy(svg,"C:/Users/Elizabeth.keller/Desktop/DCP/Migration timing data/plots/DCP_fishSR055M_2020.svg")
+  dev.off()
+  
+#####################################
+
+###############################
+# Seine sites near DCP intake #
+###############################
+
+# very close site to DCP: SR043W ***
+# close-ish sites to DCP:  SR049E, SR055E, SR057E
+# between American and Knight's Landing: SR060E, SR062E, SR071E, SR080E, SR090W
+
+##################################################
+# let's focus in on the closest station - SR043W #
+##################################################
+SeineDCP1 <- dt3[dt3$StationCode=="SR043W",]
+
+# summarize data to daily catch sum per listed species
+  # same method as for the seines
+
+# create a variable to ID specific seines
+SeineDCP1$Sample <- paste(SeineDCP1$StationCode,SeineDCP1$SampleDate)
+# Species = combine CommonName + RaceByLength to get species/run
+SeineDCP1$Species <- as.character(SeineDCP1$CommonName)
+SeineDCP1$Species[SeineDCP1$CommonName=="Chinook salmon"] <- paste(
+  SeineDCP1$RaceByLength[SeineDCP1$CommonName=="Chinook salmon"],"-run ",
+  "Chinook salmon",sep="")
+# need a species+sample variable
+SeineDCP1$SampleSpecies <- paste(SeineDCP1$Sample, SeineDCP1$Species)
+
+# sum counts that are the same seine and species
+
+SeineDCP1_sum <- SeineDCP1 %>%
+  group_by(SampleSpecies) %>%
+  dplyr::summarize(
+          Station = StationCode,
+          Date = SampleDate,
+          Method = MethodCode,
+          #Volume = max(Volume), # no volumes for seines
+          Sample = Sample,
+          Species = Species,
+          Catch_sum = sum(Count)
+          ) 
+# how I coded has duplicate rows
+# for now, just remove duplicate rows
+SeineDCP1_sum <- SeineDCP1_sum[!duplicated(SeineDCP1_sum),]
+
+#length(unique(paste(SeineDCP1$Sample,SeineDCP1$Species)))
+#length(unique(paste(SeineDCP1_sum$Sample,SeineDCP1_sum$Species)))
+
+### Create a separate dataframe with all unqiue samples and their info
+SeineDCP1_samples <- SeineDCP1 %>%
+  group_by(Sample) %>%
+  dplyr::summarize(
+          Station = StationCode,
+          Date = SampleDate,
+          Method = MethodCode,
+          #Volume = max(Volume), 
+          Sample = Sample) 
+#remove duplicate rows
+SeineDCP1_samples <- SeineDCP1_samples[!duplicated(SeineDCP1_samples),]
+length(unique(SeineDCP1$Sample))
+# need this whole df for every species
+# add Species & Catch_sum columns
+SeineDCP1_samples$Species <- character(length(SeineDCP1_samples$Sample))
+SeineDCP1_samples$Catch_sum <- 0
+
+# species to consider keeping
+  # "Fall-run Chinook salmon"
+  # "NA-run Chinook salmon"
+  # "Winter-run Chinook salmon" ****
+  # "steelhead trout" ****
+  # "LateFall-run Chinook salmon"
+  # "Spring-run Chinook salmon" ****
+  # "Adult-run Chinook salmon"
+
+samples1 <- SeineDCP1_samples
+samples1$Species <- "Winter-run Chinook salmon"
+samples2 <- SeineDCP1_samples
+samples2$Species <- "Spring-run Chinook salmon"
+samples3 <- SeineDCP1_samples
+samples3$Species <- "steelhead trout"
+
+# row for every seine and species combo (for our 3 species) 
+# and adding the summary with numbers - only for our 3 species
+SeineDCP1_samples_all <- rbind(samples1, samples2, samples3,
+                              (SeineDCP1_sum[SeineDCP1_sum$Species %in% 
+                                              c("Winter-run Chinook salmon",
+                                         "Spring-run Chinook salmon",
+                                         "steelhead trout"),]))
+# need a sample+species variable
+SeineDCP1_samples_all$SampleSpecies <- paste(
+  SeineDCP1_samples_all$Sample,SeineDCP1_samples_all$Species)
+# we want just the max count rows (we want 0 when it's zero,
+  # but the catch number if there was catch for that seine)
+SeineDCP1_samples_all_sum <- SeineDCP1_samples_all %>%
+  group_by(SampleSpecies) %>%
+  dplyr::summarize(
+          Station = Station,
+          Date = Date,
+          Method = Method,
+          #Volume = (Volume), 
+          Sample = Sample,
+          Species = Species,
+          Catch_sum = max(Catch_sum)
+          ) 
+#remove duplicate rows
+SeineDCP1_samples_all_sum <-SeineDCP1_samples_all_sum[!duplicated(
+  SeineDCP1_samples_all_sum),]
+
+length(unique(SeineDCP1_samples_all_sum$Sample))
+length(paste(SeineDCP1_samples_all_sum$Sample,SeineDCP1_samples_all_sum$Species))
+
+# actually want one row PER DAY (not per seine)
+# create a daye and species varable
+SeineDCP1_samples_all_sum$DateSpecies <- paste(SeineDCP1_samples_all_sum$Date,
+                                              SeineDCP1_samples_all_sum$Species)
+
+  # sum catch for the day (for each species)
+  # sum volume for the day
+
+SeineDCP1_summary <- SeineDCP1_samples_all_sum %>%
+  group_by(DateSpecies) %>%
+  dplyr::summarize(
+          Station = Station,
+          Date = Date,
+          Method = Method,
+          #Volume = sum(Volume), # some missing volumes
+          Species = Species,
+          Catch_sum = sum(Catch_sum)
+          ) 
+#remove duplicate rows
+SeineDCP1_summary <-SeineDCP1_summary[!duplicated(
+  SeineDCP1_summary),]
+
+# remove all the df I made that we don't need now
+#remove(SeineDCP1_samples,SeineDCP1_samples_all,
+#       SeineDCP1_samples_all_sum,SeineDCP1_sum, 
+#       samples1, samples2, samples3)
+
+
+# Add Water Year
+SeineDCP1_summary$WY <- year(SeineDCP1_summary$Date) + 
+  as.numeric(between(month(SeineDCP1_summary$Date),10,12))
+
+###############
+# Seine Plots #
+# fixing from trawl version..
+###############
+
+# make dates both POSIXct
+SeineDCP1_summary$Date <- as.POSIXct(SeineDCP1_summary$Date)
+
+# try some basic plots first
+ggplot(SeineDCP1_summary)+
+geom_line(data=SeineDCP1_summary[SeineDCP1_summary$WY==2016,], # Seine data
+            aes(x=Date, y=Catch_sum, col = Species))
+
+###############################
+# let's try looping for plots # # didn't use this
+###############################
+  # what years do we have:
+  years <- c(2016,2018,2019,2020) # incomplete data for 2021
+
+  scale=3500
+
+for (i in 1:length(years)){ # i is location
+  year=noquote(years[i])
+  # need to wrap ggplot in print function for it to plot within the loop
+  print(
+    ggplot(DCP[DCP$Year==year,]) + theme_bw()+
+    geom_line(aes(x=Date, y=`Sac Flow`))+ # Sac Flow
+    geom_line(aes(x=Date,y=NDD))+ # NDD flow
+    geom_tile(aes(x=Date,y=max(DCP[DCP$Year==year,]$`Sac Flow`)/2,fill=as.factor(`NDD Level`)), # NDD Level as background color
+            height=max(DCP[DCP$Year==year,]$`Sac Flow`),alpha=0.2) + 
+    scale_fill_manual("NDD Level", values=c("white","grey70","grey40","grey10"))+
+    geom_line(data=SeineDCP1_summary[SeineDCP1_summary$WY==year,], # Seine data
+            aes(x=Date, y=Catch_sum*scale, col = Species))+
+    scale_y_continuous(sec.axis = ~ ./scale)+
+    labs(title=paste("Daily raw catch at Seine (SR043W) WY",year), y="Flow")+
+    theme(legend.position="bottom", legend.box = "horizontal",legend.direction = "vertical"))
+    dev.copy(svg,(paste("C:/Users/Elizabeth.keller/Desktop/DCP/Migration timing data/plots/DCP_fishSR043W_",year,".svg",sep="")))
+    dev.off()
+}  
+################ 
+# specific years
+# run through these with the scale and year values
+  #########################
+scale <- 3000
+year <- 2016
+year <- 2018
+
+scale <- 1000
+year <- 2019
+scale <- 1000
+year <- 2020
+# ** 2019 and 2020 will need different scaling
+ggplot(DCP[DCP$Year==year,]) + theme_bw()+
+  geom_line(aes(x=Date, y=`Sac Flow`))+ # Sac Flow
+  geom_line(aes(x=Date,y=NDD))+ # NDD flow
+  geom_tile(aes(x=Date,y=max(DCP[DCP$Year==year,]$`Sac Flow`)/2,fill=as.factor(`NDD Level`)), # NDD Level as background color
+            height=max(DCP[DCP$Year==year,]$`Sac Flow`),alpha=0.2) + 
+  scale_fill_manual("NDD Level", values=c("white","grey70","grey40","grey10"))+
+  geom_line(data=SeineDCP1_summary[SeineDCP1_summary$WY==year,], # Seine data
+            aes(x=Date, y=Catch_sum*scale, col = Species))+
+  scale_y_continuous(sec.axis = ~ ./scale)+
+  labs(title=paste("Daily raw catch at Seine (SR043W) WY",year), y="Flow")+
+  theme(legend.position="bottom", legend.box = "horizontal",legend.direction = "vertical")
+  dev.copy(svg,(paste("C:/Users/Elizabeth.keller/Desktop/DCP/Migration timing data/plots/DCP_fishSR043W_",year,".svg",sep="")))
+  dev.off()
+  ############################################
+
+###################################
+# expand to more seine sites      #
+# SR043W + SR049E, SR055E, SR057E #
+###################################
+SeineDCP2 <- dt3[dt3$StationCode %in% c("SR043W","SR049E", "SR055E", "SR057E"),]
+
+# summarize data to daily catch sum per listed species
+  # same method as for the seines
+
+# create a variable to ID specific seines
+SeineDCP2$Sample <- paste(SeineDCP2$StationCode,SeineDCP2$SampleDate)
+# Species = combine CommonName + RaceByLength to get species/run
+SeineDCP2$Species <- as.character(SeineDCP2$CommonName)
+SeineDCP2$Species[SeineDCP2$CommonName=="Chinook salmon"] <- paste(
+  SeineDCP2$RaceByLength[SeineDCP2$CommonName=="Chinook salmon"],"-run ",
+  "Chinook salmon",sep="")
+# need a species+sample variable
+SeineDCP2$SampleSpecies <- paste(SeineDCP2$Sample, SeineDCP2$Species)
+
+# sum counts that are the same seine and species
+
+SeineDCP2_sum <- SeineDCP2 %>%
+  group_by(SampleSpecies) %>%
+  dplyr::summarize(
+          Station = StationCode,
+          Date = SampleDate,
+          Method = MethodCode,
+          #Volume = max(Volume), # no volumes for seines
+          Sample = Sample,
+          Species = Species,
+          Catch_sum = sum(Count)
+          ) 
+# how I coded has duplicate rows
+# for now, just remove duplicate rows
+SeineDCP2_sum <- SeineDCP2_sum[!duplicated(SeineDCP2_sum),]
+
+#length(unique(paste(SeineDCP2$Sample,SeineDCP2$Species)))
+#length(unique(paste(SeineDCP2_sum$Sample,SeineDCP2_sum$Species)))
+
+### Create a separate dataframe with all unqiue samples and their info
+SeineDCP2_samples <- SeineDCP2 %>%
+  group_by(Sample) %>%
+  dplyr::summarize(
+          Station = StationCode,
+          Date = SampleDate,
+          Method = MethodCode,
+          #Volume = max(Volume), 
+          Sample = Sample) 
+#remove duplicate rows
+SeineDCP2_samples <- SeineDCP2_samples[!duplicated(SeineDCP2_samples),]
+length(unique(SeineDCP2$Sample))
+# need this whole df for every species
+# add Species & Catch_sum columns
+SeineDCP2_samples$Species <- character(length(SeineDCP2_samples$Sample))
+SeineDCP2_samples$Catch_sum <- 0
+
+# species to consider keeping
+  # "Fall-run Chinook salmon"
+  # "NA-run Chinook salmon"
+  # "Winter-run Chinook salmon" ****
+  # "steelhead trout" ****
+  # "LateFall-run Chinook salmon"
+  # "Spring-run Chinook salmon" ****
+  # "Adult-run Chinook salmon"
+
+samples1 <- SeineDCP2_samples
+samples1$Species <- "Winter-run Chinook salmon"
+samples2 <- SeineDCP2_samples
+samples2$Species <- "Spring-run Chinook salmon"
+samples3 <- SeineDCP2_samples
+samples3$Species <- "steelhead trout"
+
+# row for every seine and species combo (for our 3 species) 
+# and adding the summary with numbers - only for our 3 species
+SeineDCP2_samples_all <- rbind(samples1, samples2, samples3,
+                              (SeineDCP2_sum[SeineDCP2_sum$Species %in% 
+                                              c("Winter-run Chinook salmon",
+                                         "Spring-run Chinook salmon",
+                                         "steelhead trout"),]))
+# need a sample+species variable
+SeineDCP2_samples_all$SampleSpecies <- paste(
+  SeineDCP2_samples_all$Sample,SeineDCP2_samples_all$Species)
+# we want just the max count rows (we want 0 when it's zero,
+  # but the catch number if there was catch for that seine)
+SeineDCP2_samples_all_sum <- SeineDCP2_samples_all %>%
+  group_by(SampleSpecies) %>%
+  dplyr::summarize(
+          Station = Station,
+          Date = Date,
+          Method = Method,
+          #Volume = (Volume), 
+          Sample = Sample,
+          Species = Species,
+          Catch_sum = max(Catch_sum)
+          ) 
+#remove duplicate rows
+SeineDCP2_samples_all_sum <-SeineDCP2_samples_all_sum[!duplicated(
+  SeineDCP2_samples_all_sum),]
+
+length(unique(SeineDCP2_samples_all_sum$Sample))
+length(paste(SeineDCP2_samples_all_sum$Sample,SeineDCP2_samples_all_sum$Species))
+
+# actually want one row PER DAY (not per seine)
+# create a daye and species varable
+SeineDCP2_samples_all_sum$DateSpecies <- paste(SeineDCP2_samples_all_sum$Date,
+                                              SeineDCP2_samples_all_sum$Species)
+
+  # sum catch for the day (for each species)
+  # sum volume for the day
+
+SeineDCP2_summary <- SeineDCP2_samples_all_sum %>%
+  group_by(DateSpecies) %>%
+  dplyr::summarize(
+          Station = Station,
+          Date = Date,
+          Method = Method,
+          #Volume = sum(Volume), # some missing volumes
+          Species = Species,
+          Catch_sum = sum(Catch_sum)
+          ) 
+#remove duplicate rows
+SeineDCP2_summary <-SeineDCP2_summary[!duplicated(
+  SeineDCP2_summary),]
+
+# remove all the df I made that we don't need now
+#remove(SeineDCP2_samples,SeineDCP2_samples_all,
+#       SeineDCP2_samples_all_sum,SeineDCP2_sum, 
+#       samples1, samples2, samples3)
+
+
+# Add Water Year
+SeineDCP2_summary$WY <- year(SeineDCP2_summary$Date) + 
+  as.numeric(between(month(SeineDCP2_summary$Date),10,12))
+
+###############
+# Seine Plots #
+###############
+
+# make dates both POSIXct
+SeineDCP2_summary$Date <- as.POSIXct(SeineDCP2_summary$Date)
+
+###############################
+# let's try looping for plots #
+###############################
+  # what years do we have:
+  years <- c(2016,2018,2019,2020) # incomplete data for 2021
+
+  scale=3000
+
+for (i in 1:length(years)){ # i is location
+  year=noquote(years[i])
+  # need to wrap ggplot in print function for it to plot within the loop
+  print(
+    ggplot(DCP[DCP$Year==year,]) + theme_bw()+
+    geom_line(aes(x=Date, y=`Sac Flow`))+ # Sac Flow
+    geom_line(aes(x=Date,y=NDD))+ # NDD flow
+    geom_tile(aes(x=Date,y=max(DCP[DCP$Year==year,]$`Sac Flow`)/2,fill=as.factor(`NDD Level`)), # NDD Level as background color
+            height=max(DCP[DCP$Year==year,]$`Sac Flow`),alpha=0.2) + 
+    scale_fill_manual("NDD Level", values=c("white","grey70","grey40","grey10"))+
+    geom_line(data=SeineDCP2_summary[SeineDCP2_summary$WY==year,], # Seine data
+            aes(x=Date, y=Catch_sum*scale, col = Species))+
+    scale_y_continuous(sec.axis = ~ ./scale)+
+    labs(title=paste("Daily raw catch at Seines WY ",year," (",WaterYr[WaterYr$WY==year,]$`Sac_Yr-type`,")",sep=""), y="Flow")+
+    theme(legend.position="bottom", legend.box = "horizontal",legend.direction = "vertical"))
+    dev.copy(svg,(paste("C:/Users/Elizabeth.keller/Desktop/DCP/Migration timing data/plots/DCP_fishSeines_",year,".svg",sep="")))
+    dev.off()
+}  
+################ 
+# specific years
+scale <- 600
+year <- 2020
+
+# 2020 will need different scaling because flow was much less
+ggplot(DCP[DCP$Year==year,]) + theme_bw()+
+  geom_line(aes(x=Date, y=`Sac Flow`))+ # Sac Flow
+  geom_line(aes(x=Date,y=NDD))+ # NDD flow
+  geom_tile(aes(x=Date,y=max(DCP[DCP$Year==year,]$`Sac Flow`)/2,fill=as.factor(`NDD Level`)), # NDD Level as background color
+            height=max(DCP[DCP$Year==year,]$`Sac Flow`),alpha=0.2) + 
+  scale_fill_manual("NDD Level", values=c("white","grey70","grey40","grey10"))+
+  geom_line(data=SeineDCP2_summary[SeineDCP2_summary$WY==year,], # Seine data
+            aes(x=Date, y=Catch_sum*scale, col = Species))+
+  scale_y_continuous(sec.axis = ~ ./scale)+
+  labs(title=paste("Daily raw catch at Seines WY ",year," (",WaterYr[WaterYr$WY==year,]$`Sac_Yr-type`,")",sep=""), y="Flow")+
+  theme(legend.position="bottom", legend.box = "horizontal",legend.direction = "vertical")
+  dev.copy(svg,(paste("C:/Users/Elizabeth.keller/Desktop/DCP/Migration timing data/plots/DCP_fishSeines_",year,".svg",sep="")))
+  dev.off()
+############################################
+
+####################################
+# SacPAS Sac Trawl Cumulative data #
+####################################
+
+# read in and combine all files in the folder
+# folder
+setwd("C:/Users/Elizabeth.keller/Desktop/DCP/Migration timing data/SacPAS 20220329")
+# create list of files in folder
+file_list <- list.files()
+# read in all files in the folder and combine
+for (file in file_list){
+  
+  # if the merged dataset doesn't exist, create it
+  if (file==file_list[1]){
+    dataset <- read.csv(file, header=TRUE, stringsAsFactors = F)
+    dataset$filename <- file # add filename as a column
+  }
+  
+  # if the merged dataset does exist, append to it
+  if (file!=file_list[1]){
+    temp_dataset <-read.csv(file, header=TRUE, stringsAsFactors = F)
+    temp_dataset$filename <- file
+    dataset<-rbind(dataset, temp_dataset)
+    rm(temp_dataset)
+  }
+}
+#str(dataset)
+
+# remove rows where date doesn't start with a number
+dataset <- dataset[grepl("^[[:digit:]]",dataset$Date),]
+
+# format Date as date
+# there are at least two formats of dates from various SacPAS downloads...
+  # M/DD/YYYY and YYYY-MM-DD
+dataset$mdy <- mdy(dataset$Date) # for M/DD/YYYY
+dataset$ymd <- ymd(dataset$Date) # for YYYY-MM-DD
+
+dataset$Date <- dataset$ymd
+dataset[is.na(dataset$Date),]$Date <- dataset[is.na(dataset$Date),]$mdy
+
+# Change date format
+dataset$Date <- as.POSIXct(dataset$Date,format="%Y-%m-%d")
+# pull species/run out of filename
+dataset$Species <- data.frame(do.call(rbind, strsplit(as.vector(dataset$filename), split = " ")))[,1]
+# add Year from filename
+dataset$Year <- data.frame(do.call(rbind, strsplit(as.vector(dataset$filename), split = " ")))[,2]
+
+#################
+# plots in loop #
+#################
+################################
+# Trawl data - Sherwood Harbor #
+################################
+# what years do we have:
+  years <- c(2016,2018,2019,2020,2021)
+
+for (i in 1:length(years)){
+  year=noquote(years[i])
+  scale <- (max(DCP[DCP$Year==year,]$`Sac Flow`))
+  # remove NA values from the SacPAS data
+  SacPASdata=dataset[dataset$Year==(year-1) & !is.na(dataset$Normalized.Cumulative.Raw.Sacramento.Trawls..SR055M.SR055E.SR055W.SR055X.),]
+  # need to wrap ggplot in print function for it to plot within the loop
+  print(
+    ggplot(DCP[DCP$Year==year,]) + theme_bw()+
+    geom_line(aes(x=Date, y=`Sac Flow`))+ # Sac Flow
+    geom_line(aes(x=Date,y=NDD))+ # NDD flow
+    geom_tile(aes(x=Date,y=max(DCP[DCP$Year==year,]$`Sac Flow`)/2,fill=as.factor(`NDD Level`)), # NDD Level as background color
+            height=max(DCP[DCP$Year==year,]$`Sac Flow`),alpha=0.2) + 
+    scale_fill_manual("NDD Level", values=c("white","grey70","grey40","grey10"))+
+    geom_line(data=SacPASdata, # SacPAS trawl data
+            aes(x=Date, y=Normalized.Cumulative.Raw.Sacramento.Trawls..SR055M.SR055E.SR055W.SR055X.*scale, col = Species))+
+      scale_x_datetime(limits = c(min(DCP[DCP$Year==year,]$Date),max(DCP[DCP$Year==year,]$Date))) + #set x-axis to water year (SacPAS begins in July, but all zeros)
+    #geom_point(data=SacPASdata, # SacPAS trawl data
+    #        aes(x=Date, y=Normalized.Cumulative.Raw.Sacramento.Trawls..SR055M.SR055E.SR055W.SR055X.*scale, col = Species))+
+    scale_y_continuous(sec.axis = ~ ./scale)+
+    labs(title=paste("Normalized cumulative catch at Sherwood Harbor trawl WY ",year," (",WaterYr[WaterYr$WY==year,]$`Sac_Yr-type`,")",sep=""), y="Flow")+
+    theme(legend.position="bottom", legend.box = "horizontal",legend.direction = "vertical"))
+    dev.copy(svg,(paste("C:/Users/Elizabeth.keller/Desktop/DCP/Migration timing data/plots/DCP_fishSacPAS_",year,".svg",sep="")))
+    dev.off()
+}  
+
+##############################
+# KL RST and Sherwood Harbor #
+##############################
+#################
+# first attempt *was this used ?? #
+#################
+# start with just 2018
+  year=2018
+  scale <- (max(DCP[DCP$Year==year,]$`Sac Flow`))
+  # remove NA values from the SacPAS data
+  SacPASdata=dataset[dataset$Year==(year-1) & !is.na(dataset$Normalized.Cumulative.Raw.Sacramento.Trawls..SR055M.SR055E.SR055W.SR055X.),]
+
+    ggplot.trawl <- ggplot(DCP[DCP$Year==year,]) + theme_bw()+
+    geom_line(aes(x=Date, y=`Sac Flow`))+ # Sac Flow
+    geom_line(aes(x=Date,y=NDD))+ # NDD flow
+    geom_tile(aes(x=Date,y=max(DCP[DCP$Year==year,]$`Sac Flow`)/2,fill=as.factor(`NDD Level`)), # NDD Level as background color
+            height=max(DCP[DCP$Year==year,]$`Sac Flow`),alpha=0.2) + 
+    scale_fill_manual("NDD Level", values=c("white","grey70","grey40","grey10"))+
+    geom_line(data=SacPASdata, # SacPAS trawl data
+            aes(x=Date, y=Normalized.Cumulative.Raw.Sacramento.Trawls..SR055M.SR055E.SR055W.SR055X.*scale, col = Species))+
+      scale_x_datetime(limits = c(min(DCP[DCP$Year==year,]$Date),max(DCP[DCP$Year==year,]$Date))) + #set x-axis to water year (SacPAS begins in July, but all zeros)
+    #geom_point(data=SacPASdata, # SacPAS trawl data
+    #        aes(x=Date, y=Normalized.Cumulative.Raw.Sacramento.Trawls..SR055M.SR055E.SR055W.SR055X.*scale, col = Species))+
+    scale_y_continuous(sec.axis = ~ ./scale)+
+    labs(title=paste("Normalized cumulative catch WY ",year," (",WaterYr[WaterYr$WY==year,]$`Sac_Yr-type`,")",sep=""), y="Flow")+
+    theme(legend.position="bottom", legend.box = "horizontal",legend.direction = "vertical")
+ # do similar for RST and add together
+SacPASdata=dataset[dataset$Year==(year-1) & !is.na(dataset$Normalized.Cumulative.Raw.Knights.Landing.RST),]
+ggplot.trawl + geom_line(data=SacPASdata, # SacPAS trawl data
+            aes(x=Date, y=Normalized.Cumulative.Raw.Knights.Landing.RST*scale, col = Species,  linetype=2))
+
+
+# LOOP
+  years <- c(2016,2018,2019,2020,2021)
+
+for (i in 1:length(years)){
+  year=noquote(years[i])
+  scale <- (max(DCP[DCP$Year==year,]$`Sac Flow`))
+  # remove NA values from the SacPAS data
+  SacPASdata=dataset[dataset$Year==(year-1) & !is.na(dataset$Normalized.Cumulative.Raw.Sacramento.Trawls..SR055M.SR055E.SR055W.SR055X.),]
+  
+  ggplot.trawl <- ggplot(DCP[DCP$Year==year,]) + theme_bw()+
+    geom_line(aes(x=Date, y=`Sac Flow`))+ # Sac Flow
+    geom_line(aes(x=Date,y=NDD))+ # NDD flow
+    geom_tile(aes(x=Date,y=max(DCP[DCP$Year==year,]$`Sac Flow`)/2,fill=as.factor(`NDD Level`)), # NDD Level as background color
+            height=max(DCP[DCP$Year==year,]$`Sac Flow`),alpha=0.2) + 
+    scale_fill_manual("NDD Level", values=c("white","grey70","grey40","grey10"))+
+    geom_line(data=SacPASdata, # SacPAS trawl data
+            aes(x=Date, y=Normalized.Cumulative.Raw.Sacramento.Trawls..SR055M.SR055E.SR055W.SR055X.*scale, col = Species))+
+      scale_x_datetime(limits = c(min(DCP[DCP$Year==year,]$Date),max(DCP[DCP$Year==year,]$Date))) + #set x-axis to water year (SacPAS begins in July, but all zeros)
+    scale_y_continuous(sec.axis = ~ ./scale)+
+    labs(title=paste("Normalized cumulative catch WY ",year," (",WaterYr[WaterYr$WY==year,]$`Sac_Yr-type`,")",sep=""), y="Flow")+
+    theme(legend.position="bottom", legend.box = "horizontal",legend.direction = "vertical")
+  
+  SacPASdata=dataset[dataset$Year==(year-1) & !is.na(dataset$Normalized.Cumulative.Raw.Knights.Landing.RST),]
+  # need to wrap ggplot in print function for it to plot within the loop
+  print(
+     # do similar for RST and add together
+    ggplot.trawl + geom_line(data=SacPASdata, # SacPAS trawl data
+            aes(x=Date, y=Normalized.Cumulative.Raw.Knights.Landing.RST*scale, col = Species,  linetype="dotdash")))
+    dev.copy(svg,(paste("C:/Users/Elizabeth.keller/Desktop/DCP/Migration timing data/plots/DCP_fishSacPAS2_",year,".svg",sep="")))
+    dev.off()
+}  
+
+#########################
+# need long format data #
+#########################
+library(tidyr)
+SacPAS_long <- gather(dataset, location, value, 
+                      Normalized.Cumulative.Raw.Tisdale.Weir.RST:Samples.Chipps.Island.Trawls..SB018M.SB018N.SB018S.SB018X., 
+                      factor_key=TRUE)
+# remove all the NA lines
+SacPAS_long <- SacPAS_long[!is.na(SacPAS_long$value),]
+# make more reasonable values for "location"
+SacPAS_long$Location <- c("Normalized Cumulative Raw Tisdale Weir RST",
+                         "Normalized Cumulative Raw Knights Landing RST",
+                         "Normalized Cumulative Raw Sacramento Beach Seines",
+                         "Samples Sacramento Beach Seines",
+                         "Normalized Cumulative Index Sacramento Beach Seines",
+                         "Normalized Cumulative Raw Sacramento Trawls",
+                         "Samples Sacramento Trawls",
+                         "Normalized Cumulative Index Sacramento Trawls",
+                         "Normalized Cumulative Raw Chipps Island Trawls",
+                         "Samples Chipps Island Trawls")[match(SacPAS_long$location, unique(SacPAS_long$location))]
+
+# plot the long format data
+# start with just 2018
+year=2018
+scale <- (max(DCP[DCP$Year==year,]$`Sac Flow`))
+ggplot(DCP[DCP$Year==year,]) + theme_bw()+
+    geom_line(aes(x=Date, y=`Sac Flow`))+ # Sac Flow
+    geom_line(aes(x=Date,y=NDD))+ # NDD flow
+    geom_tile(aes(x=Date,y=max(DCP[DCP$Year==year,]$`Sac Flow`)/2,fill=as.factor(`NDD Level`)), # NDD Level as background color
+            height=max(DCP[DCP$Year==year,]$`Sac Flow`),alpha=0.2) + 
+    scale_fill_manual("NDD Level", values=c("white","grey70","grey40","grey10"))+
+    
+geom_line(data=SacPAS_long[SacPAS_long$Location %in% c("Normalized Cumulative Raw Knights Landing RST",
+                                                       "Normalized Cumulative Raw Sacramento Beach Seines",
+                                                       "Normalized Cumulative Raw Sacramento Trawls",
+                                                       "Normalized Cumulative Raw Chipps Island Trawls"),], # SacPAS trawl data
+    aes(x=Date, y=value*scale, col = Species, linetype=Location))+
+    scale_linetype_manual(values=c(3,4,5,1))+
+    scale_x_datetime(limits = c(as.POSIXct(paste((year-1),"-10-01",sep="")),paste(year,"-07-01",sep=""))) + 
+        # set x-axis to start with water year (SacPAS begins in July, but all zeros)
+        # x-axis upper limit at July 1 to cut off the start of follownig year in SacPAS data
+    scale_y_continuous(sec.axis = ~ ./scale)+
+    labs(title=paste("Normalized cumulative catch WY ",year," (",WaterYr[WaterYr$WY==year,]$`Sac_Yr-type`,")",sep=""), y="Flow")+
+    theme(legend.position="bottom", legend.box = "horizontal",legend.direction = "vertical")
+
+
+# LOOP
+years <- c(2016,2018,2019,2020,2021)
+
+for (i in 1:length(years)){
+  year=noquote(years[i])
+  scale <- (max(DCP[DCP$Year==year,]$`Sac Flow`))
+
+  # need to wrap ggplot in print function for it to plot within the loop
+  print(ggplot(DCP[DCP$Year==year,]) + theme_bw()+
+    geom_line(aes(x=Date, y=`Sac Flow`))+ # Sac Flow
+    geom_line(aes(x=Date,y=NDD))+ # NDD flow
+    geom_tile(aes(x=Date,y=max(DCP[DCP$Year==year,]$`Sac Flow`)/2,fill=as.factor(`NDD Level`)), # NDD Level as background color
+            height=max(DCP[DCP$Year==year,]$`Sac Flow`),alpha=0.2) + 
+    scale_fill_manual("NDD Level", values=c("white","grey70","grey40","grey10"))+
+    
+geom_line(data=SacPAS_long[SacPAS_long$Location %in% c("Normalized Cumulative Raw Knights Landing RST",
+                                                       "Normalized Cumulative Raw Sacramento Beach Seines",
+                                                       "Normalized Cumulative Raw Sacramento Trawls",
+                                                       "Normalized Cumulative Raw Chipps Island Trawls"),], # SacPAS trawl data
+    aes(x=Date, y=value*scale, col = Species, linetype=Location))+
+    scale_linetype_manual(values=c(3,4,5,1))+  
+  scale_x_datetime(limits = c(as.POSIXct(paste((year-1),"-10-01",sep="")),paste(year,"-06-30",sep=""))) + 
+        # set x-axis to start with water year (SacPAS begins in July, but all zeros)
+        # x-axis upper limit at July 1 to cut off the start of follownig year in SacPAS data
+    scale_y_continuous(sec.axis = ~ ./scale)+
+    labs(title=paste("Normalized cumulative catch WY ",year," (",WaterYr[WaterYr$WY==year,]$`Sac_Yr-type`,")",sep=""), y="Flow")+
+    theme(legend.position="bottom", legend.box = "horizontal",legend.direction = "vertical"))
+    dev.copy(svg,(paste("C:/Users/Elizabeth.keller/Desktop/DCP/Migration timing data/plots/DCP_fishSacPAS4_",year,".svg",sep="")))
+    dev.off()
+}
+
+
+############################
+
+#######################################################
+# analysis of additional spring pulse period on SR+FR #
+#######################################################
+
+# prepped dataset only has spring-run, so start there (then rework for FR later)
+# cut to just spring-run for ease (no WR or steelhead)
+SPP <- TrawlDCP_summary[TrawlDCP_summary$Species=="Spring-run Chinook salmon",]
+
+# create data table for results
+columns <- c("WY","Peak_Date","PP_sum","Annual_sum") 
+SPP_results <- data.frame(matrix(nrow = (length(unique(TrawlDCP_summary$WY))), ncol = length(columns))) 
+colnames(SPP_results) <- columns
+SPP_results$WY <- unique(SPP$WY)
+SPP_results <- left_join(SPP_results,WaterYr[,c(1,3)])
+
+yearlist <- SPP_results$WY
+
+for (i in 1:length(SPP_results$WY)){
+  
+  temp_dataset <- SPP[SPP$WY==SPP_results$WY[i],] # data for specific WY
+  # get Date of the max daily catch
+    SPP_results[SPP_results$WY==SPP_results$WY[i],]$Peak_Date <- substr(temp_dataset[which.max(temp_dataset$Catch_sum),3][[1]], start=1, stop=10)
+  # sum of all catch over the year
+    SPP_results$Annual_sum[i] <- sum(temp_dataset$Catch_sum)
+}
+# *** dates are weird - the Date column and the date in the Date-Species is NOT the same.....????
+library(lubridate)
+SPP_results$Peak_Date <- ymd(SPP_results$Peak_Date)
+
+test<-temp_dataset[which.max(temp_dataset$Catch_sum),3][[1]]
+
+
+# Days we want: SPP_results$Peak_Date[i]-6 < as.Date(SPP$Date) < SPP_results$Peak_Date[i]+6
+# want 5 days before and after peak
+for (i in 1:length(SPP_results$WY)){
+  temp_dataset <- SPP[SPP$WY==SPP_results$WY[i] & as.Date(SPP$Date) > SPP_results$Peak_Date[i]-6
+                      & as.Date(SPP$Date) < SPP_results$Peak_Date[i]+6,]
+  # sum of daily catch for just the +-5 days period around the peak date  
+  SPP_results$PP_sum[i] <- sum(temp_dataset$Catch_sum)
+
+}
+# Sherwood Harbor trawl is not daily, so we won't get 11 values - only ~4
+# should still give a rough percentage of total catch, but coarser than a daily data value
+
+SPP_results$proportion <- SPP_results$PP_sum / SPP_results$Annual_sum
+
+
+str(test)
+
+##########################################################################
+## Defunct SacPAS data stuff from before
+###############
+# SacPAS data #
+###############
+# SacPAS data is named differently
+# year is start year, not water year = need to add 1 to get WY
+# SacPAS data us also by run/species
+
+winter2021 <- read.csv("C:/Users/Elizabeth.keller/Desktop/DCP/Migration timing data/SacPAS 20220329/winter-run 2020 samplingdaily_1648601706_871.csv")
+winter2016 <- read.csv("C:/Users/Elizabeth.keller/Desktop/DCP/Migration timing data/SacPAS 20220329/winter-run 2015 samplingdaily_1648601744_995.csv")
+
+library(lubridate)
+# 2016 plots
+# ggplot2
+data_ggp <- data.frame(Date = winter2016$Date,                            # Reshape data frame
+                       y = c(winter2016$Normalized.Cumulative.Raw.Tisdale.Weir.RST, 
+                             winter2016$Normalized.Cumulative.Raw.Knights.Landing.RST, 
+                             winter2016$Normalized.Cumulative.Raw.Sacramento.Beach.Seines..SR080E.SR071E.SR062E.SR057E.SR055E.SR060E.AM001S.SR049E.,
+                             #winter2016$Samples.Sacramento.Beach.Seines..SR080E.SR071E.SR062E.SR057E.SR055E.SR060E.AM001S.SR049E.,
+                             #winter2016$Normalized.Cumulative.Index.Sacramento.Beach.Seines..SR080E.SR071E.SR062E.SR057E.SR055E.SR060E.AM001S.SR049E.,
+                             winter2016$Normalized.Cumulative.Raw.Sacramento.Trawls..SR055M.SR055E.SR055W.SR055X.,
+                             #winter2016$Samples.Sacramento.Trawls..SR055M.SR055E.SR055W.SR055X.,
+                             #winter2016$Normalized.Cumulative.Index.Sacramento.Trawls..SR055M.SR055E.SR055W.SR055X.,
+                             winter2016$Normalized.Cumulative.Raw.Chipps.Island.Trawls..SB018M.SB018N.SB018S.SB018X.
+                             #,
+                             #winter2016$Samples.Chipps.Island.Trawls..SB018M.SB018N.SB018S.SB018X.
+                             ),
+                       group = c(rep("Normalized.Cumulative.Raw.Tisdale.Weir.RST", nrow(winter2016)),
+                                 rep("Normalized.Cumulative.Raw.Knights.Landing.RST", nrow(winter2016)),
+                                 rep("Normalized.Cumulative.Raw.Sacramento.Beach.Seines", nrow(winter2016)),
+                                 #rep("Samples.Sacramento.Beach.Seines", nrow(winter2016)),
+                                 #rep("Normalized.Cumulative.Index.Sacramento.Beach.Seines", nrow(winter2016)),
+                                 rep("Normalized.Cumulative.Raw.Sacramento.Trawls", nrow(winter2016)),
+                                 #rep("Samples.Sacramento.Trawls", nrow(winter2016)),
+                                 #rep("Normalized.Cumulative.Index.Sacramento.Trawls", nrow(winter2016)),
+                                 rep("Normalized.Cumulative.Raw.Chipps.Island.Trawls", nrow(winter2016))
+                                 #,
+                                 #rep("Samples.Chipps.Island.Trawls", nrow(winter2016))
+                                 ))
+# remove NAs
+data_ggp2 <- na.omit(data_ggp) # remove NAs
+data_ggp2$Date <- mdy(data_ggp2$Date) # fix date format
+
+library("ggplot2")
+ggp <- ggplot(data_ggp2, aes(Date, y, col = group)) +             # Create ggplot2 plot
+  geom_line()
+ggp                                                           # Draw plot
+
+# overlay DCP
+# make dates both POSIXct
+data_ggp2$Date <- as.POSIXct(data_ggp2$Date)
+
+ggplot() +             # Create ggplot2 plot
+  geom_line(data=DCP2016, aes(x=Date, y=NDD))+
+  geom_line(data=data_ggp2, aes(x=Date, y=y*6000, col = group))+ # scale by 6000 to match NDD
+  scale_y_continuous(sec.axis = ~ ./6000) # second axis for cumulative fish data
+
+################################################################################################################
+# let's try different fish lines - normalized cumulative index
+data_ggp <- data.frame(Date = winter2016$Date,                            # Reshape data frame
+                       y = c(#winter2016$Normalized.Cumulative.Raw.Tisdale.Weir.RST, 
+                             #winter2016$Normalized.Cumulative.Raw.Knights.Landing.RST, 
+                             winter2016$Normalized.Cumulative.Raw.Sacramento.Beach.Seines..SR080E.SR071E.SR062E.SR057E.SR055E.SR060E.AM001S.SR049E.,
+                             #winter2016$Samples.Sacramento.Beach.Seines..SR080E.SR071E.SR062E.SR057E.SR055E.SR060E.AM001S.SR049E.,
+                             winter2016$Normalized.Cumulative.Index.Sacramento.Beach.Seines..SR080E.SR071E.SR062E.SR057E.SR055E.SR060E.AM001S.SR049E.,
+                             winter2016$Normalized.Cumulative.Raw.Sacramento.Trawls..SR055M.SR055E.SR055W.SR055X.,
+                             #winter2016$Samples.Sacramento.Trawls..SR055M.SR055E.SR055W.SR055X.,
+                             winter2016$Normalized.Cumulative.Index.Sacramento.Trawls..SR055M.SR055E.SR055W.SR055X.,
+                             winter2016$Normalized.Cumulative.Raw.Chipps.Island.Trawls..SB018M.SB018N.SB018S.SB018X.
+                             #,
+                             #winter2016$Samples.Chipps.Island.Trawls..SB018M.SB018N.SB018S.SB018X.
+                             ),
+                       group = c(#rep("Normalized.Cumulative.Raw.Tisdale.Weir.RST", nrow(winter2016)),
+                                 #rep("Normalized.Cumulative.Raw.Knights.Landing.RST", nrow(winter2016)),
+                                 rep("Normalized.Cumulative.Raw.Sacramento.Beach.Seines", nrow(winter2016)),
+                                 #rep("Samples.Sacramento.Beach.Seines", nrow(winter2016)),
+                                 rep("Normalized.Cumulative.Index.Sacramento.Beach.Seines", nrow(winter2016)),
+                                 rep("Normalized.Cumulative.Raw.Sacramento.Trawls", nrow(winter2016)),
+                                 #rep("Samples.Sacramento.Trawls", nrow(winter2016)),
+                                 rep("Normalized.Cumulative.Index.Sacramento.Trawls", nrow(winter2016)),
+                                 rep("Normalized.Cumulative.Raw.Chipps.Island.Trawls", nrow(winter2016))
+                                 #,
+                                 #rep("Samples.Chipps.Island.Trawls", nrow(winter2016))
+                                 ))
+# remove NAs
+data_ggp2 <- na.omit(data_ggp) # remove NAs
+data_ggp2$Date <- mdy(data_ggp2$Date) # fix date format
+
+library("ggplot2")
+ggp <- ggplot(data_ggp2, aes(Date, y, col = group)) +             # Create ggplot2 plot
+  geom_line()
+ggp                                                           # Draw plot
+
+# overlay DCP
+# make dates both POSIXct
+data_ggp2$Date <- as.POSIXct(data_ggp2$Date)
+
+ggplot() +             # Create ggplot2 plot
+  geom_line(data=data_ggp2[data_ggp2$group=="Normalized.Cumulative.Index.Sacramento.Beach.Seines",], aes(x=Date, y=y/53.4, col="red"))+ # scale by 6000 to match NDD
+  geom_line(data=data_ggp2[data_ggp2$group=="Normalized.Cumulative.Raw.Sacramento.Beach.Seines",], aes(x=Date, y=y))+
+  scale_y_continuous(sec.axis = ~ .*53.4) # second axis for cumulative fish data
+# dividing the indes by the max of the index does no give the normalized values... 
+# are the normalized ones really raw (i.e., don't account for number of samples)?
+# how do the indices relate to one another?
+
+# would we rather do just index (not normaized cumulative)??
+  # https://www.cbr.washington.edu/sacramento/tmp/samplingdaily_1650594543_212.html
+# could do bars for the index too (DCP older ops figures did this)
+  # however, then no bar to me looks like 0, when it's actually no data (no samples taken that day)
+
+########################################
+# try with just index (not cumulative) #
+########################################
+
+winterindex2016 <- read.csv("C:/Users/Elizabeth.keller/Desktop/DCP/Migration timing data/winter-run WY2016 samplingdaily_1650594543_212.csv")
+winterindex2016 <- winterindex2016[,c("Date","Index.Sacramento.Beach.Seines..SR080E.SR071E.SR062E.SR057E.SR055E.SR060E.AM001S.SR049E.",
+                                      "Index.Sacramento.Trawls..SR055M.SR055E.SR055W.SR055X.")] # keep only Sac seine index and trawl index
+data_ggp <- data.frame(Date = winterindex2016$Date,                            # Reshape data frame
+                       y = c(winterindex2016$Index.Sacramento.Beach.Seines..SR080E.SR071E.SR062E.SR057E.SR055E.SR060E.AM001S.SR049E.,
+                            winterindex2016$Index.Sacramento.Trawls..SR055M.SR055E.SR055W.SR055X.),
+                       group = c(rep("Index.Sacramento.Beach.Seines", nrow(winterindex2016)),
+                                 rep("Index.Sacramento.Trawls", nrow(winterindex2016))))
+data_ggp2 <- na.omit(data_ggp)
+data_ggp2$Date <- ymd(data_ggp2$Date) # fix date format
+
+ggplot(data_ggp2, aes(Date, y, col = group)) +             # Create ggplot2 plot
+  geom_line()
+
+# overlay DCP
+# make dates both POSIXct
+data_ggp2$Date <- as.POSIXct(data_ggp2$Date)
+ggplot() +             # Create ggplot2 plot
+  geom_line(data=DCP2016, aes(x=Date, y=NDD))+
+  geom_line(data=data_ggp2, aes(x=Date, y=y*200, col = group))+ # scale by 6000 to match NDD
+  scale_y_continuous(sec.axis = ~ ./200) # second axis for cumulative fish data
+# sac trawl and sac seine index have different orders of magnitude/scale *maybe better to use cumulative?
+# or normalize the indices --> divide by max
+
+
+
+
+
+
+
+
