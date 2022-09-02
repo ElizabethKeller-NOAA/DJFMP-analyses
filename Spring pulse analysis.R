@@ -389,8 +389,6 @@ SH_Trawl_sums$DateSpecies <- paste(SH_Trawl_sums$SampleDate,
 
 
 # sum over species+date
-# create  Catch_sum column before or during?
-# SH_Trawl_sampledates$Catch_sum <- 0
 SH_Trawl_summary <- SH_Trawl_sums %>%
   group_by(DateSpecies) %>%
   dplyr::summarize(
@@ -456,4 +454,8 @@ for (i in 1:length(SPP_results$WY)){
 # should still give a rough percentage of total catch, but coarser than daily data
 
 SPP_results$proportion <- SPP_results$PP_sum / SPP_results$Annual_sum
-
+colnames(SPP_results) <- c("Water Year","Date of Peak Catch",
+                           "Pulse Period Catch","Annual Catch",
+                           "Sac Water Year Type",
+                           "Catch Proportion during Pulse Period")
+write.csv(SPP_results, "SPP_results.csv", row.names=FALSE)
