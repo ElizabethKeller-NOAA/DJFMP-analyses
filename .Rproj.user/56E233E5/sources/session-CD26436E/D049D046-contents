@@ -36,7 +36,293 @@ pal_yrtype2 <- c( "C" = "#FDE333", "D" = "#53CC67", "BN" = "#009B95","AN" = "#00
 # use R script from EDI Data Portal
 # OR read in manually after download
 
-# for this analysis, need only dt2 and dt3 from their script
+# for this analysis, need only dt1 and dt2 from their script
+
+#######
+# dt1 #
+#######
+# file from "https://pasta.lternet.edu/package/data/eml/edi/244/9/71c16ead9b8ffa4da7a52da180f601f4" 
+dt1 <-read.csv("1976-2001_DJFMP_trawl_fish_and_water_quality_data.csv",header=F 
+               ,skip=1
+               ,sep=","  
+               ,quot='"' 
+               , col.names=c(
+                 "Location",     
+                 "RegionCode",     
+                 "StationCode",     
+                 "SampleDate",     
+                 "SampleTime",     
+                 "MethodCode",     
+                 "GearConditionCode",     
+                 "WeatherCode",     
+                 "DO",     
+                 "WaterTemp",     
+                 "Turbidity",     
+                 "Secchi",     
+                 "SpecificConductance",     
+                 "TowNumber",     
+                 "SamplingDirection",     
+                 "TowDuration",     
+                 "FlowDebris",     
+                 "SiteDisturbance",     
+                 "AlternateSite",     
+                 "SeineLength",     
+                 "SeineWidth",     
+                 "SeineDepth",     
+                 "FlowmeterStart",     
+                 "FlowmeterEnd",     
+                 "FlowmeterDifference",     
+                 "Volume",     
+                 "OrganismCode",     
+                 "IEPFishCode",     
+                 "CommonName",     
+                 "MarkCode",     
+                 "StageCode",     
+                 "Expression",     
+                 "ForkLength",     
+                 "RaceByLength",     
+                 "TagCode",     
+                 "RaceByTag",     
+                 "ArchivalID",     
+                 "SpecialStudyID",     
+                 "GeneticID",     
+                 "Probability1",     
+                 "GeneticID2",     
+                 "Probability2",     
+                 "SexGeneID",     
+                 "Ots28",     
+                 "Lab",     
+                 "GeneticTest",     
+                 "GeneticModel",     
+                 "Count"    ), check.names=TRUE)
+
+unlink(infile1)
+
+# Fix any interval or ratio columns mistakenly read in as nominal and nominal columns read as numeric or dates read as strings
+
+if (class(dt1$Location)!="factor") dt1$Location<- as.factor(dt1$Location)
+if (class(dt1$RegionCode)!="factor") dt1$RegionCode<- as.factor(dt1$RegionCode)
+if (class(dt1$StationCode)!="factor") dt1$StationCode<- as.factor(dt1$StationCode)                                   
+# attempting to convert dt1$SampleDate dateTime string to R date structure (date or POSIXct)                                
+tmpDateFormat<-"%Y-%m-%d"
+tmp1SampleDate<-as.Date(dt1$SampleDate,format=tmpDateFormat)
+# Keep the new dates only if they all converted correctly
+if(length(tmp1SampleDate) == length(tmp1SampleDate[!is.na(tmp1SampleDate)])){dt1$SampleDate <- tmp1SampleDate } else {print("Date conversion failed for dt1$SampleDate. Please inspect the data and do the date conversion yourself.")}                                                                    
+rm(tmpDateFormat,tmp1SampleDate) 
+if (class(dt1$MethodCode)!="factor") dt1$MethodCode<- as.factor(dt1$MethodCode)
+if (class(dt1$GearConditionCode)!="factor") dt1$GearConditionCode<- as.factor(dt1$GearConditionCode)
+if (class(dt1$WeatherCode)!="factor") dt1$WeatherCode<- as.factor(dt1$WeatherCode)
+if (class(dt1$DO)=="factor") dt1$DO <-as.numeric(levels(dt1$DO))[as.integer(dt1$DO) ]               
+if (class(dt1$DO)=="character") dt1$DO <-as.numeric(dt1$DO)
+if (class(dt1$WaterTemp)=="factor") dt1$WaterTemp <-as.numeric(levels(dt1$WaterTemp))[as.integer(dt1$WaterTemp) ]               
+if (class(dt1$WaterTemp)=="character") dt1$WaterTemp <-as.numeric(dt1$WaterTemp)
+if (class(dt1$Turbidity)=="factor") dt1$Turbidity <-as.numeric(levels(dt1$Turbidity))[as.integer(dt1$Turbidity) ]               
+if (class(dt1$Turbidity)=="character") dt1$Turbidity <-as.numeric(dt1$Turbidity)
+if (class(dt1$Secchi)=="factor") dt1$Secchi <-as.numeric(levels(dt1$Secchi))[as.integer(dt1$Secchi) ]               
+if (class(dt1$Secchi)=="character") dt1$Secchi <-as.numeric(dt1$Secchi)
+if (class(dt1$SpecificConductance)=="factor") dt1$SpecificConductance <-as.numeric(levels(dt1$SpecificConductance))[as.integer(dt1$SpecificConductance) ]               
+if (class(dt1$SpecificConductance)=="character") dt1$SpecificConductance <-as.numeric(dt1$SpecificConductance)
+if (class(dt1$TowNumber)=="factor") dt1$TowNumber <-as.numeric(levels(dt1$TowNumber))[as.integer(dt1$TowNumber) ]               
+if (class(dt1$TowNumber)=="character") dt1$TowNumber <-as.numeric(dt1$TowNumber)
+if (class(dt1$SamplingDirection)!="factor") dt1$SamplingDirection<- as.factor(dt1$SamplingDirection)
+if (class(dt1$TowDuration)=="factor") dt1$TowDuration <-as.numeric(levels(dt1$TowDuration))[as.integer(dt1$TowDuration) ]               
+if (class(dt1$TowDuration)=="character") dt1$TowDuration <-as.numeric(dt1$TowDuration)
+if (class(dt1$FlowDebris)!="factor") dt1$FlowDebris<- as.factor(dt1$FlowDebris)
+if (class(dt1$SiteDisturbance)!="factor") dt1$SiteDisturbance<- as.factor(dt1$SiteDisturbance)
+if (class(dt1$AlternateSite)!="factor") dt1$AlternateSite<- as.factor(dt1$AlternateSite)
+if (class(dt1$SeineLength)=="factor") dt1$SeineLength <-as.numeric(levels(dt1$SeineLength))[as.integer(dt1$SeineLength) ]               
+if (class(dt1$SeineLength)=="character") dt1$SeineLength <-as.numeric(dt1$SeineLength)
+if (class(dt1$SeineWidth)=="factor") dt1$SeineWidth <-as.numeric(levels(dt1$SeineWidth))[as.integer(dt1$SeineWidth) ]               
+if (class(dt1$SeineWidth)=="character") dt1$SeineWidth <-as.numeric(dt1$SeineWidth)
+if (class(dt1$SeineDepth)=="factor") dt1$SeineDepth <-as.numeric(levels(dt1$SeineDepth))[as.integer(dt1$SeineDepth) ]               
+if (class(dt1$SeineDepth)=="character") dt1$SeineDepth <-as.numeric(dt1$SeineDepth)
+if (class(dt1$FlowmeterStart)=="factor") dt1$FlowmeterStart <-as.numeric(levels(dt1$FlowmeterStart))[as.integer(dt1$FlowmeterStart) ]               
+if (class(dt1$FlowmeterStart)=="character") dt1$FlowmeterStart <-as.numeric(dt1$FlowmeterStart)
+if (class(dt1$FlowmeterEnd)=="factor") dt1$FlowmeterEnd <-as.numeric(levels(dt1$FlowmeterEnd))[as.integer(dt1$FlowmeterEnd) ]               
+if (class(dt1$FlowmeterEnd)=="character") dt1$FlowmeterEnd <-as.numeric(dt1$FlowmeterEnd)
+if (class(dt1$FlowmeterDifference)=="factor") dt1$FlowmeterDifference <-as.numeric(levels(dt1$FlowmeterDifference))[as.integer(dt1$FlowmeterDifference) ]               
+if (class(dt1$FlowmeterDifference)=="character") dt1$FlowmeterDifference <-as.numeric(dt1$FlowmeterDifference)
+if (class(dt1$Volume)=="factor") dt1$Volume <-as.numeric(levels(dt1$Volume))[as.integer(dt1$Volume) ]               
+if (class(dt1$Volume)=="character") dt1$Volume <-as.numeric(dt1$Volume)
+if (class(dt1$OrganismCode)!="factor") dt1$OrganismCode<- as.factor(dt1$OrganismCode)
+if (class(dt1$IEPFishCode)!="factor") dt1$IEPFishCode<- as.factor(dt1$IEPFishCode)
+if (class(dt1$CommonName)!="factor") dt1$CommonName<- as.factor(dt1$CommonName)
+if (class(dt1$MarkCode)!="factor") dt1$MarkCode<- as.factor(dt1$MarkCode)
+if (class(dt1$StageCode)!="factor") dt1$StageCode<- as.factor(dt1$StageCode)
+if (class(dt1$Expression)!="factor") dt1$Expression<- as.factor(dt1$Expression)
+if (class(dt1$ForkLength)=="factor") dt1$ForkLength <-as.numeric(levels(dt1$ForkLength))[as.integer(dt1$ForkLength) ]               
+if (class(dt1$ForkLength)=="character") dt1$ForkLength <-as.numeric(dt1$ForkLength)
+if (class(dt1$RaceByLength)!="factor") dt1$RaceByLength<- as.factor(dt1$RaceByLength)
+if (class(dt1$TagCode)!="factor") dt1$TagCode<- as.factor(dt1$TagCode)
+if (class(dt1$RaceByTag)!="factor") dt1$RaceByTag<- as.factor(dt1$RaceByTag)
+if (class(dt1$ArchivalID)!="factor") dt1$ArchivalID<- as.factor(dt1$ArchivalID)
+if (class(dt1$SpecialStudyID)!="factor") dt1$SpecialStudyID<- as.factor(dt1$SpecialStudyID)
+if (class(dt1$GeneticID)!="factor") dt1$GeneticID<- as.factor(dt1$GeneticID)
+if (class(dt1$Probability1)=="factor") dt1$Probability1 <-as.numeric(levels(dt1$Probability1))[as.integer(dt1$Probability1) ]               
+if (class(dt1$Probability1)=="character") dt1$Probability1 <-as.numeric(dt1$Probability1)
+if (class(dt1$GeneticID2)!="factor") dt1$GeneticID2<- as.factor(dt1$GeneticID2)
+if (class(dt1$Probability2)=="factor") dt1$Probability2 <-as.numeric(levels(dt1$Probability2))[as.integer(dt1$Probability2) ]               
+if (class(dt1$Probability2)=="character") dt1$Probability2 <-as.numeric(dt1$Probability2)
+if (class(dt1$SexGeneID)!="factor") dt1$SexGeneID<- as.factor(dt1$SexGeneID)
+if (class(dt1$Ots28)!="factor") dt1$Ots28<- as.factor(dt1$Ots28)
+if (class(dt1$Lab)!="factor") dt1$Lab<- as.factor(dt1$Lab)
+if (class(dt1$GeneticTest)!="factor") dt1$GeneticTest<- as.factor(dt1$GeneticTest)
+if (class(dt1$GeneticModel)!="factor") dt1$GeneticModel<- as.factor(dt1$GeneticModel)
+if (class(dt1$Count)=="factor") dt1$Count <-as.numeric(levels(dt1$Count))[as.integer(dt1$Count) ]               
+if (class(dt1$Count)=="character") dt1$Count <-as.numeric(dt1$Count)
+
+# Convert Missing Values to NA for non-dates
+
+dt1$Location <- as.factor(ifelse((trimws(as.character(dt1$Location))==trimws("NA")),NA,as.character(dt1$Location)))
+dt1$RegionCode <- as.factor(ifelse((trimws(as.character(dt1$RegionCode))==trimws("NA")),NA,as.character(dt1$RegionCode)))
+dt1$StationCode <- as.factor(ifelse((trimws(as.character(dt1$StationCode))==trimws("NA")),NA,as.character(dt1$StationCode)))
+dt1$MethodCode <- as.factor(ifelse((trimws(as.character(dt1$MethodCode))==trimws("NA")),NA,as.character(dt1$MethodCode)))
+dt1$GearConditionCode <- as.factor(ifelse((trimws(as.character(dt1$GearConditionCode))==trimws("NA")),NA,as.character(dt1$GearConditionCode)))
+dt1$WeatherCode <- as.factor(ifelse((trimws(as.character(dt1$WeatherCode))==trimws("NA")),NA,as.character(dt1$WeatherCode)))
+dt1$DO <- ifelse((trimws(as.character(dt1$DO))==trimws("NA")),NA,dt1$DO)               
+suppressWarnings(dt1$DO <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$DO))==as.character(as.numeric("NA"))),NA,dt1$DO))
+dt1$WaterTemp <- ifelse((trimws(as.character(dt1$WaterTemp))==trimws("NA")),NA,dt1$WaterTemp)               
+suppressWarnings(dt1$WaterTemp <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$WaterTemp))==as.character(as.numeric("NA"))),NA,dt1$WaterTemp))
+dt1$Turbidity <- ifelse((trimws(as.character(dt1$Turbidity))==trimws("NA")),NA,dt1$Turbidity)               
+suppressWarnings(dt1$Turbidity <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Turbidity))==as.character(as.numeric("NA"))),NA,dt1$Turbidity))
+dt1$Secchi <- ifelse((trimws(as.character(dt1$Secchi))==trimws("NA")),NA,dt1$Secchi)               
+suppressWarnings(dt1$Secchi <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Secchi))==as.character(as.numeric("NA"))),NA,dt1$Secchi))
+dt1$SpecificConductance <- ifelse((trimws(as.character(dt1$SpecificConductance))==trimws("NA")),NA,dt1$SpecificConductance)               
+suppressWarnings(dt1$SpecificConductance <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$SpecificConductance))==as.character(as.numeric("NA"))),NA,dt1$SpecificConductance))
+dt1$TowNumber <- ifelse((trimws(as.character(dt1$TowNumber))==trimws("NA")),NA,dt1$TowNumber)               
+suppressWarnings(dt1$TowNumber <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$TowNumber))==as.character(as.numeric("NA"))),NA,dt1$TowNumber))
+dt1$SamplingDirection <- as.factor(ifelse((trimws(as.character(dt1$SamplingDirection))==trimws("NA")),NA,as.character(dt1$SamplingDirection)))
+dt1$TowDuration <- ifelse((trimws(as.character(dt1$TowDuration))==trimws("NA")),NA,dt1$TowDuration)               
+suppressWarnings(dt1$TowDuration <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$TowDuration))==as.character(as.numeric("NA"))),NA,dt1$TowDuration))
+dt1$FlowDebris <- as.factor(ifelse((trimws(as.character(dt1$FlowDebris))==trimws("NA")),NA,as.character(dt1$FlowDebris)))
+dt1$SiteDisturbance <- as.factor(ifelse((trimws(as.character(dt1$SiteDisturbance))==trimws("NA")),NA,as.character(dt1$SiteDisturbance)))
+dt1$AlternateSite <- as.factor(ifelse((trimws(as.character(dt1$AlternateSite))==trimws("NA")),NA,as.character(dt1$AlternateSite)))
+dt1$SeineLength <- ifelse((trimws(as.character(dt1$SeineLength))==trimws("NA")),NA,dt1$SeineLength)               
+suppressWarnings(dt1$SeineLength <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$SeineLength))==as.character(as.numeric("NA"))),NA,dt1$SeineLength))
+dt1$SeineWidth <- ifelse((trimws(as.character(dt1$SeineWidth))==trimws("NA")),NA,dt1$SeineWidth)               
+suppressWarnings(dt1$SeineWidth <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$SeineWidth))==as.character(as.numeric("NA"))),NA,dt1$SeineWidth))
+dt1$SeineDepth <- ifelse((trimws(as.character(dt1$SeineDepth))==trimws("NA")),NA,dt1$SeineDepth)               
+suppressWarnings(dt1$SeineDepth <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$SeineDepth))==as.character(as.numeric("NA"))),NA,dt1$SeineDepth))
+dt1$FlowmeterStart <- ifelse((trimws(as.character(dt1$FlowmeterStart))==trimws("NA")),NA,dt1$FlowmeterStart)               
+suppressWarnings(dt1$FlowmeterStart <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$FlowmeterStart))==as.character(as.numeric("NA"))),NA,dt1$FlowmeterStart))
+dt1$FlowmeterEnd <- ifelse((trimws(as.character(dt1$FlowmeterEnd))==trimws("NA")),NA,dt1$FlowmeterEnd)               
+suppressWarnings(dt1$FlowmeterEnd <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$FlowmeterEnd))==as.character(as.numeric("NA"))),NA,dt1$FlowmeterEnd))
+dt1$FlowmeterDifference <- ifelse((trimws(as.character(dt1$FlowmeterDifference))==trimws("NA")),NA,dt1$FlowmeterDifference)               
+suppressWarnings(dt1$FlowmeterDifference <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$FlowmeterDifference))==as.character(as.numeric("NA"))),NA,dt1$FlowmeterDifference))
+dt1$Volume <- ifelse((trimws(as.character(dt1$Volume))==trimws("NA")),NA,dt1$Volume)               
+suppressWarnings(dt1$Volume <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Volume))==as.character(as.numeric("NA"))),NA,dt1$Volume))
+dt1$OrganismCode <- as.factor(ifelse((trimws(as.character(dt1$OrganismCode))==trimws("NA")),NA,as.character(dt1$OrganismCode)))
+dt1$IEPFishCode <- as.factor(ifelse((trimws(as.character(dt1$IEPFishCode))==trimws("NA")),NA,as.character(dt1$IEPFishCode)))
+dt1$CommonName <- as.factor(ifelse((trimws(as.character(dt1$CommonName))==trimws("NA")),NA,as.character(dt1$CommonName)))
+dt1$MarkCode <- as.factor(ifelse((trimws(as.character(dt1$MarkCode))==trimws("NA")),NA,as.character(dt1$MarkCode)))
+dt1$StageCode <- as.factor(ifelse((trimws(as.character(dt1$StageCode))==trimws("NA")),NA,as.character(dt1$StageCode)))
+dt1$Expression <- as.factor(ifelse((trimws(as.character(dt1$Expression))==trimws("NA")),NA,as.character(dt1$Expression)))
+dt1$ForkLength <- ifelse((trimws(as.character(dt1$ForkLength))==trimws("NA")),NA,dt1$ForkLength)               
+suppressWarnings(dt1$ForkLength <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$ForkLength))==as.character(as.numeric("NA"))),NA,dt1$ForkLength))
+dt1$RaceByLength <- as.factor(ifelse((trimws(as.character(dt1$RaceByLength))==trimws("NA")),NA,as.character(dt1$RaceByLength)))
+dt1$TagCode <- as.factor(ifelse((trimws(as.character(dt1$TagCode))==trimws("NA")),NA,as.character(dt1$TagCode)))
+dt1$RaceByTag <- as.factor(ifelse((trimws(as.character(dt1$RaceByTag))==trimws("NA")),NA,as.character(dt1$RaceByTag)))
+dt1$ArchivalID <- as.factor(ifelse((trimws(as.character(dt1$ArchivalID))==trimws("NA")),NA,as.character(dt1$ArchivalID)))
+dt1$SpecialStudyID <- as.factor(ifelse((trimws(as.character(dt1$SpecialStudyID))==trimws("NA")),NA,as.character(dt1$SpecialStudyID)))
+dt1$GeneticID <- as.factor(ifelse((trimws(as.character(dt1$GeneticID))==trimws("NA")),NA,as.character(dt1$GeneticID)))
+dt1$Probability1 <- ifelse((trimws(as.character(dt1$Probability1))==trimws("NA")),NA,dt1$Probability1)               
+suppressWarnings(dt1$Probability1 <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Probability1))==as.character(as.numeric("NA"))),NA,dt1$Probability1))
+dt1$GeneticID2 <- as.factor(ifelse((trimws(as.character(dt1$GeneticID2))==trimws("NA")),NA,as.character(dt1$GeneticID2)))
+dt1$Probability2 <- ifelse((trimws(as.character(dt1$Probability2))==trimws("NA")),NA,dt1$Probability2)               
+suppressWarnings(dt1$Probability2 <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Probability2))==as.character(as.numeric("NA"))),NA,dt1$Probability2))
+dt1$SexGeneID <- as.factor(ifelse((trimws(as.character(dt1$SexGeneID))==trimws("NA")),NA,as.character(dt1$SexGeneID)))
+dt1$Ots28 <- as.factor(ifelse((trimws(as.character(dt1$Ots28))==trimws("NA")),NA,as.character(dt1$Ots28)))
+dt1$Lab <- as.factor(ifelse((trimws(as.character(dt1$Lab))==trimws("NA")),NA,as.character(dt1$Lab)))
+dt1$GeneticTest <- as.factor(ifelse((trimws(as.character(dt1$GeneticTest))==trimws("NA")),NA,as.character(dt1$GeneticTest)))
+dt1$GeneticModel <- as.factor(ifelse((trimws(as.character(dt1$GeneticModel))==trimws("NA")),NA,as.character(dt1$GeneticModel)))
+dt1$Count <- ifelse((trimws(as.character(dt1$Count))==trimws("NA")),NA,dt1$Count)               
+suppressWarnings(dt1$Count <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt1$Count))==as.character(as.numeric("NA"))),NA,dt1$Count))
+
+
+# Here is the structure of the input data frame:
+str(dt1)                            
+attach(dt1)                            
+# The analyses below are basic descriptions of the variables. After testing, they should be replaced.                 
+
+summary(Location)
+summary(RegionCode)
+summary(StationCode)
+summary(SampleDate)
+summary(SampleTime)
+summary(MethodCode)
+summary(GearConditionCode)
+summary(WeatherCode)
+summary(DO)
+summary(WaterTemp)
+summary(Turbidity)
+summary(Secchi)
+summary(SpecificConductance)
+summary(TowNumber)
+summary(SamplingDirection)
+summary(TowDuration)
+summary(FlowDebris)
+summary(SiteDisturbance)
+summary(AlternateSite)
+summary(SeineLength)
+summary(SeineWidth)
+summary(SeineDepth)
+summary(FlowmeterStart)
+summary(FlowmeterEnd)
+summary(FlowmeterDifference)
+summary(Volume)
+summary(OrganismCode)
+summary(IEPFishCode)
+summary(CommonName)
+summary(MarkCode)
+summary(StageCode)
+summary(Expression)
+summary(ForkLength)
+summary(RaceByLength)
+summary(TagCode)
+summary(RaceByTag)
+summary(ArchivalID)
+summary(SpecialStudyID)
+summary(GeneticID)
+summary(Probability1)
+summary(GeneticID2)
+summary(Probability2)
+summary(SexGeneID)
+summary(Ots28)
+summary(Lab)
+summary(GeneticTest)
+summary(GeneticModel)
+summary(Count) 
+# Get more details on character variables
+
+summary(as.factor(dt1$Location)) 
+summary(as.factor(dt1$RegionCode)) 
+summary(as.factor(dt1$StationCode)) 
+summary(as.factor(dt1$MethodCode)) 
+summary(as.factor(dt1$GearConditionCode)) 
+summary(as.factor(dt1$WeatherCode)) 
+summary(as.factor(dt1$SamplingDirection)) 
+summary(as.factor(dt1$FlowDebris)) 
+summary(as.factor(dt1$SiteDisturbance)) 
+summary(as.factor(dt1$AlternateSite)) 
+summary(as.factor(dt1$OrganismCode)) 
+summary(as.factor(dt1$IEPFishCode)) 
+summary(as.factor(dt1$CommonName)) 
+summary(as.factor(dt1$MarkCode)) 
+summary(as.factor(dt1$StageCode)) 
+summary(as.factor(dt1$Expression)) 
+summary(as.factor(dt1$RaceByLength)) 
+summary(as.factor(dt1$TagCode)) 
+summary(as.factor(dt1$RaceByTag)) 
+summary(as.factor(dt1$ArchivalID)) 
+summary(as.factor(dt1$SpecialStudyID)) 
+summary(as.factor(dt1$GeneticID)) 
+summary(as.factor(dt1$GeneticID2)) 
+summary(as.factor(dt1$SexGeneID)) 
+summary(as.factor(dt1$Ots28)) 
+summary(as.factor(dt1$Lab)) 
+summary(as.factor(dt1$GeneticTest)) 
+summary(as.factor(dt1$GeneticModel))
+detach(dt1)       
 
 #######
 # dt2 #
@@ -322,291 +608,7 @@ summary(as.factor(dt2$GeneticTest))
 summary(as.factor(dt2$GeneticModel))
 detach(dt2)        
 
-#######
-# dt3 #
-#######
-# file from: "https://pasta.lternet.edu/package/data/eml/edi/244/9/147fd5e2c7db15913b2ffa44410dc7f9" 
-dt3 <-read.csv("1976-2021_DJFMP_beach_seine_fish_and_water_quality_data.csv",header=F 
-               ,skip=1
-               ,sep=","  
-               ,quot='"' 
-               , col.names=c(
-                 "Location",     
-                 "RegionCode",     
-                 "StationCode",     
-                 "SampleDate",     
-                 "SampleTime",     
-                 "MethodCode",     
-                 "GearConditionCode",     
-                 "WeatherCode",     
-                 "DO",     
-                 "WaterTemp",     
-                 "Turbidity",     
-                 "Secchi",     
-                 "SpecificConductance",     
-                 "TowNumber",     
-                 "SamplingDirection",     
-                 "TowDuration",     
-                 "FlowDebris",     
-                 "SiteDisturbance",     
-                 "AlternateSite",     
-                 "SeineLength",     
-                 "SeineWidth",     
-                 "SeineDepth",     
-                 "FlowmeterStart",     
-                 "FlowmeterEnd",     
-                 "FlowmeterDifference",     
-                 "Volume",     
-                 "OrganismCode",     
-                 "IEPFishCode",     
-                 "CommonName",     
-                 "MarkCode",     
-                 "StageCode",     
-                 "Expression",     
-                 "ForkLength",     
-                 "RaceByLength",     
-                 "TagCode",     
-                 "RaceByTag",     
-                 "ArchivalID",     
-                 "SpecialStudyID",     
-                 "GeneticID",     
-                 "Probability1",     
-                 "GeneticID2",     
-                 "Probability2",     
-                 "SexGeneID",     
-                 "Ots28",     
-                 "Lab",     
-                 "GeneticTest",     
-                 "GeneticModel",     
-                 "Count"    ), check.names=TRUE)
-
-#unlink(infile3)
-
-# Fix any interval or ratio columns mistakenly read in as nominal and nominal columns read as numeric or dates read as strings
-
-if (class(dt3$Location)!="factor") dt3$Location<- as.factor(dt3$Location)
-if (class(dt3$RegionCode)!="factor") dt3$RegionCode<- as.factor(dt3$RegionCode)
-if (class(dt3$StationCode)!="factor") dt3$StationCode<- as.factor(dt3$StationCode)                                   
-# attempting to convert dt3$SampleDate dateTime string to R date structure (date or POSIXct)                                
-tmpDateFormat<-"%Y-%m-%d"
-tmp3SampleDate<-as.Date(dt3$SampleDate,format=tmpDateFormat)
-# Keep the new dates only if they all converted correctly
-if(length(tmp3SampleDate) == length(tmp3SampleDate[!is.na(tmp3SampleDate)])){dt3$SampleDate <- tmp3SampleDate } else {print("Date conversion failed for dt3$SampleDate. Please inspect the data and do the date conversion yourself.")}                                                                    
-rm(tmpDateFormat,tmp3SampleDate) 
-if (class(dt3$MethodCode)!="factor") dt3$MethodCode<- as.factor(dt3$MethodCode)
-if (class(dt3$GearConditionCode)!="factor") dt3$GearConditionCode<- as.factor(dt3$GearConditionCode)
-if (class(dt3$WeatherCode)!="factor") dt3$WeatherCode<- as.factor(dt3$WeatherCode)
-if (class(dt3$DO)=="factor") dt3$DO <-as.numeric(levels(dt3$DO))[as.integer(dt3$DO) ]               
-if (class(dt3$DO)=="character") dt3$DO <-as.numeric(dt3$DO)
-if (class(dt3$WaterTemp)=="factor") dt3$WaterTemp <-as.numeric(levels(dt3$WaterTemp))[as.integer(dt3$WaterTemp) ]               
-if (class(dt3$WaterTemp)=="character") dt3$WaterTemp <-as.numeric(dt3$WaterTemp)
-if (class(dt3$Turbidity)=="factor") dt3$Turbidity <-as.numeric(levels(dt3$Turbidity))[as.integer(dt3$Turbidity) ]               
-if (class(dt3$Turbidity)=="character") dt3$Turbidity <-as.numeric(dt3$Turbidity)
-if (class(dt3$Secchi)=="factor") dt3$Secchi <-as.numeric(levels(dt3$Secchi))[as.integer(dt3$Secchi) ]               
-if (class(dt3$Secchi)=="character") dt3$Secchi <-as.numeric(dt3$Secchi)
-if (class(dt3$SpecificConductance)=="factor") dt3$SpecificConductance <-as.numeric(levels(dt3$SpecificConductance))[as.integer(dt3$SpecificConductance) ]               
-if (class(dt3$SpecificConductance)=="character") dt3$SpecificConductance <-as.numeric(dt3$SpecificConductance)
-if (class(dt3$TowNumber)=="factor") dt3$TowNumber <-as.numeric(levels(dt3$TowNumber))[as.integer(dt3$TowNumber) ]               
-if (class(dt3$TowNumber)=="character") dt3$TowNumber <-as.numeric(dt3$TowNumber)
-if (class(dt3$SamplingDirection)!="factor") dt3$SamplingDirection<- as.factor(dt3$SamplingDirection)
-if (class(dt3$TowDuration)=="factor") dt3$TowDuration <-as.numeric(levels(dt3$TowDuration))[as.integer(dt3$TowDuration) ]               
-if (class(dt3$TowDuration)=="character") dt3$TowDuration <-as.numeric(dt3$TowDuration)
-if (class(dt3$FlowDebris)!="factor") dt3$FlowDebris<- as.factor(dt3$FlowDebris)
-if (class(dt3$SiteDisturbance)!="factor") dt3$SiteDisturbance<- as.factor(dt3$SiteDisturbance)
-if (class(dt3$AlternateSite)!="factor") dt3$AlternateSite<- as.factor(dt3$AlternateSite)
-if (class(dt3$SeineLength)=="factor") dt3$SeineLength <-as.numeric(levels(dt3$SeineLength))[as.integer(dt3$SeineLength) ]               
-if (class(dt3$SeineLength)=="character") dt3$SeineLength <-as.numeric(dt3$SeineLength)
-if (class(dt3$SeineWidth)=="factor") dt3$SeineWidth <-as.numeric(levels(dt3$SeineWidth))[as.integer(dt3$SeineWidth) ]               
-if (class(dt3$SeineWidth)=="character") dt3$SeineWidth <-as.numeric(dt3$SeineWidth)
-if (class(dt3$SeineDepth)=="factor") dt3$SeineDepth <-as.numeric(levels(dt3$SeineDepth))[as.integer(dt3$SeineDepth) ]               
-if (class(dt3$SeineDepth)=="character") dt3$SeineDepth <-as.numeric(dt3$SeineDepth)
-if (class(dt3$FlowmeterStart)=="factor") dt3$FlowmeterStart <-as.numeric(levels(dt3$FlowmeterStart))[as.integer(dt3$FlowmeterStart) ]               
-if (class(dt3$FlowmeterStart)=="character") dt3$FlowmeterStart <-as.numeric(dt3$FlowmeterStart)
-if (class(dt3$FlowmeterEnd)=="factor") dt3$FlowmeterEnd <-as.numeric(levels(dt3$FlowmeterEnd))[as.integer(dt3$FlowmeterEnd) ]               
-if (class(dt3$FlowmeterEnd)=="character") dt3$FlowmeterEnd <-as.numeric(dt3$FlowmeterEnd)
-if (class(dt3$FlowmeterDifference)=="factor") dt3$FlowmeterDifference <-as.numeric(levels(dt3$FlowmeterDifference))[as.integer(dt3$FlowmeterDifference) ]               
-if (class(dt3$FlowmeterDifference)=="character") dt3$FlowmeterDifference <-as.numeric(dt3$FlowmeterDifference)
-if (class(dt3$Volume)=="factor") dt3$Volume <-as.numeric(levels(dt3$Volume))[as.integer(dt3$Volume) ]               
-if (class(dt3$Volume)=="character") dt3$Volume <-as.numeric(dt3$Volume)
-if (class(dt3$OrganismCode)!="factor") dt3$OrganismCode<- as.factor(dt3$OrganismCode)
-if (class(dt3$IEPFishCode)!="factor") dt3$IEPFishCode<- as.factor(dt3$IEPFishCode)
-if (class(dt3$CommonName)!="factor") dt3$CommonName<- as.factor(dt3$CommonName)
-if (class(dt3$MarkCode)!="factor") dt3$MarkCode<- as.factor(dt3$MarkCode)
-if (class(dt3$StageCode)!="factor") dt3$StageCode<- as.factor(dt3$StageCode)
-if (class(dt3$Expression)!="factor") dt3$Expression<- as.factor(dt3$Expression)
-if (class(dt3$ForkLength)=="factor") dt3$ForkLength <-as.numeric(levels(dt3$ForkLength))[as.integer(dt3$ForkLength) ]               
-if (class(dt3$ForkLength)=="character") dt3$ForkLength <-as.numeric(dt3$ForkLength)
-if (class(dt3$RaceByLength)!="factor") dt3$RaceByLength<- as.factor(dt3$RaceByLength)
-if (class(dt3$TagCode)!="factor") dt3$TagCode<- as.factor(dt3$TagCode)
-if (class(dt3$RaceByTag)!="factor") dt3$RaceByTag<- as.factor(dt3$RaceByTag)
-if (class(dt3$ArchivalID)!="factor") dt3$ArchivalID<- as.factor(dt3$ArchivalID)
-if (class(dt3$SpecialStudyID)!="factor") dt3$SpecialStudyID<- as.factor(dt3$SpecialStudyID)
-if (class(dt3$GeneticID)!="factor") dt3$GeneticID<- as.factor(dt3$GeneticID)
-if (class(dt3$Probability1)=="factor") dt3$Probability1 <-as.numeric(levels(dt3$Probability1))[as.integer(dt3$Probability1) ]               
-if (class(dt3$Probability1)=="character") dt3$Probability1 <-as.numeric(dt3$Probability1)
-if (class(dt3$GeneticID2)!="factor") dt3$GeneticID2<- as.factor(dt3$GeneticID2)
-if (class(dt3$Probability2)=="factor") dt3$Probability2 <-as.numeric(levels(dt3$Probability2))[as.integer(dt3$Probability2) ]               
-if (class(dt3$Probability2)=="character") dt3$Probability2 <-as.numeric(dt3$Probability2)
-if (class(dt3$SexGeneID)!="factor") dt3$SexGeneID<- as.factor(dt3$SexGeneID)
-if (class(dt3$Ots28)!="factor") dt3$Ots28<- as.factor(dt3$Ots28)
-if (class(dt3$Lab)!="factor") dt3$Lab<- as.factor(dt3$Lab)
-if (class(dt3$GeneticTest)!="factor") dt3$GeneticTest<- as.factor(dt3$GeneticTest)
-if (class(dt3$GeneticModel)!="factor") dt3$GeneticModel<- as.factor(dt3$GeneticModel)
-if (class(dt3$Count)=="factor") dt3$Count <-as.numeric(levels(dt3$Count))[as.integer(dt3$Count) ]               
-if (class(dt3$Count)=="character") dt3$Count <-as.numeric(dt3$Count)
-
-# Convert Missing Values to NA for non-dates
-
-dt3$Location <- as.factor(ifelse((trimws(as.character(dt3$Location))==trimws("NA")),NA,as.character(dt3$Location)))
-dt3$RegionCode <- as.factor(ifelse((trimws(as.character(dt3$RegionCode))==trimws("NA")),NA,as.character(dt3$RegionCode)))
-dt3$StationCode <- as.factor(ifelse((trimws(as.character(dt3$StationCode))==trimws("NA")),NA,as.character(dt3$StationCode)))
-dt3$MethodCode <- as.factor(ifelse((trimws(as.character(dt3$MethodCode))==trimws("NA")),NA,as.character(dt3$MethodCode)))
-dt3$GearConditionCode <- as.factor(ifelse((trimws(as.character(dt3$GearConditionCode))==trimws("NA")),NA,as.character(dt3$GearConditionCode)))
-dt3$WeatherCode <- as.factor(ifelse((trimws(as.character(dt3$WeatherCode))==trimws("NA")),NA,as.character(dt3$WeatherCode)))
-dt3$DO <- ifelse((trimws(as.character(dt3$DO))==trimws("NA")),NA,dt3$DO)               
-suppressWarnings(dt3$DO <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt3$DO))==as.character(as.numeric("NA"))),NA,dt3$DO))
-dt3$WaterTemp <- ifelse((trimws(as.character(dt3$WaterTemp))==trimws("NA")),NA,dt3$WaterTemp)               
-suppressWarnings(dt3$WaterTemp <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt3$WaterTemp))==as.character(as.numeric("NA"))),NA,dt3$WaterTemp))
-dt3$Turbidity <- ifelse((trimws(as.character(dt3$Turbidity))==trimws("NA")),NA,dt3$Turbidity)               
-suppressWarnings(dt3$Turbidity <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt3$Turbidity))==as.character(as.numeric("NA"))),NA,dt3$Turbidity))
-dt3$Secchi <- ifelse((trimws(as.character(dt3$Secchi))==trimws("NA")),NA,dt3$Secchi)               
-suppressWarnings(dt3$Secchi <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt3$Secchi))==as.character(as.numeric("NA"))),NA,dt3$Secchi))
-dt3$SpecificConductance <- ifelse((trimws(as.character(dt3$SpecificConductance))==trimws("NA")),NA,dt3$SpecificConductance)               
-suppressWarnings(dt3$SpecificConductance <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt3$SpecificConductance))==as.character(as.numeric("NA"))),NA,dt3$SpecificConductance))
-dt3$TowNumber <- ifelse((trimws(as.character(dt3$TowNumber))==trimws("NA")),NA,dt3$TowNumber)               
-suppressWarnings(dt3$TowNumber <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt3$TowNumber))==as.character(as.numeric("NA"))),NA,dt3$TowNumber))
-dt3$SamplingDirection <- as.factor(ifelse((trimws(as.character(dt3$SamplingDirection))==trimws("NA")),NA,as.character(dt3$SamplingDirection)))
-dt3$TowDuration <- ifelse((trimws(as.character(dt3$TowDuration))==trimws("NA")),NA,dt3$TowDuration)               
-suppressWarnings(dt3$TowDuration <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt3$TowDuration))==as.character(as.numeric("NA"))),NA,dt3$TowDuration))
-dt3$FlowDebris <- as.factor(ifelse((trimws(as.character(dt3$FlowDebris))==trimws("NA")),NA,as.character(dt3$FlowDebris)))
-dt3$SiteDisturbance <- as.factor(ifelse((trimws(as.character(dt3$SiteDisturbance))==trimws("NA")),NA,as.character(dt3$SiteDisturbance)))
-dt3$AlternateSite <- as.factor(ifelse((trimws(as.character(dt3$AlternateSite))==trimws("NA")),NA,as.character(dt3$AlternateSite)))
-dt3$SeineLength <- ifelse((trimws(as.character(dt3$SeineLength))==trimws("NA")),NA,dt3$SeineLength)               
-suppressWarnings(dt3$SeineLength <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt3$SeineLength))==as.character(as.numeric("NA"))),NA,dt3$SeineLength))
-dt3$SeineWidth <- ifelse((trimws(as.character(dt3$SeineWidth))==trimws("NA")),NA,dt3$SeineWidth)               
-suppressWarnings(dt3$SeineWidth <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt3$SeineWidth))==as.character(as.numeric("NA"))),NA,dt3$SeineWidth))
-dt3$SeineDepth <- ifelse((trimws(as.character(dt3$SeineDepth))==trimws("NA")),NA,dt3$SeineDepth)               
-suppressWarnings(dt3$SeineDepth <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt3$SeineDepth))==as.character(as.numeric("NA"))),NA,dt3$SeineDepth))
-dt3$FlowmeterStart <- ifelse((trimws(as.character(dt3$FlowmeterStart))==trimws("NA")),NA,dt3$FlowmeterStart)               
-suppressWarnings(dt3$FlowmeterStart <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt3$FlowmeterStart))==as.character(as.numeric("NA"))),NA,dt3$FlowmeterStart))
-dt3$FlowmeterEnd <- ifelse((trimws(as.character(dt3$FlowmeterEnd))==trimws("NA")),NA,dt3$FlowmeterEnd)               
-suppressWarnings(dt3$FlowmeterEnd <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt3$FlowmeterEnd))==as.character(as.numeric("NA"))),NA,dt3$FlowmeterEnd))
-dt3$FlowmeterDifference <- ifelse((trimws(as.character(dt3$FlowmeterDifference))==trimws("NA")),NA,dt3$FlowmeterDifference)               
-suppressWarnings(dt3$FlowmeterDifference <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt3$FlowmeterDifference))==as.character(as.numeric("NA"))),NA,dt3$FlowmeterDifference))
-dt3$Volume <- ifelse((trimws(as.character(dt3$Volume))==trimws("NA")),NA,dt3$Volume)               
-suppressWarnings(dt3$Volume <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt3$Volume))==as.character(as.numeric("NA"))),NA,dt3$Volume))
-dt3$OrganismCode <- as.factor(ifelse((trimws(as.character(dt3$OrganismCode))==trimws("NA")),NA,as.character(dt3$OrganismCode)))
-dt3$IEPFishCode <- as.factor(ifelse((trimws(as.character(dt3$IEPFishCode))==trimws("NA")),NA,as.character(dt3$IEPFishCode)))
-dt3$CommonName <- as.factor(ifelse((trimws(as.character(dt3$CommonName))==trimws("NA")),NA,as.character(dt3$CommonName)))
-dt3$MarkCode <- as.factor(ifelse((trimws(as.character(dt3$MarkCode))==trimws("NA")),NA,as.character(dt3$MarkCode)))
-dt3$StageCode <- as.factor(ifelse((trimws(as.character(dt3$StageCode))==trimws("NA")),NA,as.character(dt3$StageCode)))
-dt3$Expression <- as.factor(ifelse((trimws(as.character(dt3$Expression))==trimws("NA")),NA,as.character(dt3$Expression)))
-dt3$ForkLength <- ifelse((trimws(as.character(dt3$ForkLength))==trimws("NA")),NA,dt3$ForkLength)               
-suppressWarnings(dt3$ForkLength <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt3$ForkLength))==as.character(as.numeric("NA"))),NA,dt3$ForkLength))
-dt3$RaceByLength <- as.factor(ifelse((trimws(as.character(dt3$RaceByLength))==trimws("NA")),NA,as.character(dt3$RaceByLength)))
-dt3$TagCode <- as.factor(ifelse((trimws(as.character(dt3$TagCode))==trimws("NA")),NA,as.character(dt3$TagCode)))
-dt3$RaceByTag <- as.factor(ifelse((trimws(as.character(dt3$RaceByTag))==trimws("NA")),NA,as.character(dt3$RaceByTag)))
-dt3$ArchivalID <- as.factor(ifelse((trimws(as.character(dt3$ArchivalID))==trimws("NA")),NA,as.character(dt3$ArchivalID)))
-dt3$SpecialStudyID <- as.factor(ifelse((trimws(as.character(dt3$SpecialStudyID))==trimws("NA")),NA,as.character(dt3$SpecialStudyID)))
-dt3$GeneticID <- as.factor(ifelse((trimws(as.character(dt3$GeneticID))==trimws("NA")),NA,as.character(dt3$GeneticID)))
-dt3$Probability1 <- ifelse((trimws(as.character(dt3$Probability1))==trimws("NA")),NA,dt3$Probability1)               
-suppressWarnings(dt3$Probability1 <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt3$Probability1))==as.character(as.numeric("NA"))),NA,dt3$Probability1))
-dt3$GeneticID2 <- as.factor(ifelse((trimws(as.character(dt3$GeneticID2))==trimws("NA")),NA,as.character(dt3$GeneticID2)))
-dt3$Probability2 <- ifelse((trimws(as.character(dt3$Probability2))==trimws("NA")),NA,dt3$Probability2)               
-suppressWarnings(dt3$Probability2 <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt3$Probability2))==as.character(as.numeric("NA"))),NA,dt3$Probability2))
-dt3$SexGeneID <- as.factor(ifelse((trimws(as.character(dt3$SexGeneID))==trimws("NA")),NA,as.character(dt3$SexGeneID)))
-dt3$Ots28 <- as.factor(ifelse((trimws(as.character(dt3$Ots28))==trimws("NA")),NA,as.character(dt3$Ots28)))
-dt3$Lab <- as.factor(ifelse((trimws(as.character(dt3$Lab))==trimws("NA")),NA,as.character(dt3$Lab)))
-dt3$GeneticTest <- as.factor(ifelse((trimws(as.character(dt3$GeneticTest))==trimws("NA")),NA,as.character(dt3$GeneticTest)))
-dt3$GeneticModel <- as.factor(ifelse((trimws(as.character(dt3$GeneticModel))==trimws("NA")),NA,as.character(dt3$GeneticModel)))
-dt3$Count <- ifelse((trimws(as.character(dt3$Count))==trimws("NA")),NA,dt3$Count)               
-suppressWarnings(dt3$Count <- ifelse(!is.na(as.numeric("NA")) & (trimws(as.character(dt3$Count))==as.character(as.numeric("NA"))),NA,dt3$Count))
-
-
-# Here is the structure of the input data frame:
-str(dt3)                            
-attach(dt3)                            
-# The analyses below are basic descriptions of the variables. After testing, they should be replaced.                 
-
-summary(Location)
-summary(RegionCode)
-summary(StationCode)
-summary(SampleDate)
-summary(SampleTime)
-summary(MethodCode)
-summary(GearConditionCode)
-summary(WeatherCode)
-summary(DO)
-summary(WaterTemp)
-summary(Turbidity)
-summary(Secchi)
-summary(SpecificConductance)
-summary(TowNumber)
-summary(SamplingDirection)
-summary(TowDuration)
-summary(FlowDebris)
-summary(SiteDisturbance)
-summary(AlternateSite)
-summary(SeineLength)
-summary(SeineWidth)
-summary(SeineDepth)
-summary(FlowmeterStart)
-summary(FlowmeterEnd)
-summary(FlowmeterDifference)
-summary(Volume)
-summary(OrganismCode)
-summary(IEPFishCode)
-summary(CommonName)
-summary(MarkCode)
-summary(StageCode)
-summary(Expression)
-summary(ForkLength)
-summary(RaceByLength)
-summary(TagCode)
-summary(RaceByTag)
-summary(ArchivalID)
-summary(SpecialStudyID)
-summary(GeneticID)
-summary(Probability1)
-summary(GeneticID2)
-summary(Probability2)
-summary(SexGeneID)
-summary(Ots28)
-summary(Lab)
-summary(GeneticTest)
-summary(GeneticModel)
-summary(Count) 
-# Get more details on character variables
-
-summary(as.factor(dt3$Location)) 
-summary(as.factor(dt3$RegionCode)) 
-summary(as.factor(dt3$StationCode)) 
-summary(as.factor(dt3$MethodCode)) 
-summary(as.factor(dt3$GearConditionCode)) 
-summary(as.factor(dt3$WeatherCode)) 
-summary(as.factor(dt3$SamplingDirection)) 
-summary(as.factor(dt3$FlowDebris)) 
-summary(as.factor(dt3$SiteDisturbance)) 
-summary(as.factor(dt3$AlternateSite)) 
-summary(as.factor(dt3$OrganismCode)) 
-summary(as.factor(dt3$IEPFishCode)) 
-summary(as.factor(dt3$CommonName)) 
-summary(as.factor(dt3$MarkCode)) 
-summary(as.factor(dt3$StageCode)) 
-summary(as.factor(dt3$Expression)) 
-summary(as.factor(dt3$RaceByLength)) 
-summary(as.factor(dt3$TagCode)) 
-summary(as.factor(dt3$RaceByTag)) 
-summary(as.factor(dt3$ArchivalID)) 
-summary(as.factor(dt3$SpecialStudyID)) 
-summary(as.factor(dt3$GeneticID)) 
-summary(as.factor(dt3$GeneticID2)) 
-summary(as.factor(dt3$SexGeneID)) 
-summary(as.factor(dt3$Ots28)) 
-summary(as.factor(dt3$Lab)) 
-summary(as.factor(dt3$GeneticTest)) 
-summary(as.factor(dt3$GeneticModel))
-detach(dt3)               
+ 
 
 ######################
 
@@ -616,8 +618,8 @@ detach(dt3)
 
 # merge the two time periods together
 #colnames(dt2)==colnames(dt3)
-dataset<-rbind(dt2,dt3)
-#remove(dt2,dt3)
+dataset<-rbind(dt1,dt2)
+#remove(dt1,dt2)
 
 # remove all the unnecessary middle columns
 #dataset <- dataset[,c("Location","StationCode", "SampleDate",
