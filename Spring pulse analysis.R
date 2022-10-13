@@ -2,7 +2,7 @@
 library(here)
 library(readxl)
 library(lubridate)
-#library(ggplot2)
+library(ggplot2)
 #library(dplyr)
 #library(purrr)
 library(tidyverse)
@@ -32,7 +32,7 @@ dt2$WY <- year(dt2$SampleDate) +
 # clip dt2 to station we want
 # Sherwood Harbor
 SH_Trawl <- dt2[dt2$StationCode=="SR055M",]
-remove(dt2)
+#remove(dt2)
 
 # Species = combine CommonName + RaceByLength to get species/run
 SH_Trawl$Species <- as.character(SH_Trawl$CommonName)
@@ -155,24 +155,43 @@ for (i in 1:length(SPP_results$WY)){
 SPP_results$Peak_Date <- ymd(SPP_results$Peak_Date)
 
 # consider a multi-day pulse period around peak catch
-PPdays <- 11 # number of days of the pulse period
+for(j in c(1,3,5,7,9,11,13)){PPdays <- j # number of days of the pulse period
 PPdaybounds <- ((PPdays-1) #peakday
                 /2 # days on each side
                 +1) # using exclusive not inclusive <> below
-
+SPP_results_fill <- SPP_results
 for (i in 1:length(SPP_results$WY)){
   temp_dataset <- SPP[SPP$WY==SPP_results$WY[i] & as.Date(SPP$SampleDate) > SPP_results$Peak_Date[i]-PPdaybounds
                       & as.Date(SPP$SampleDate) < SPP_results$Peak_Date[i]+PPdaybounds,]
   # sum of daily catch for just the +-5 days period around the peak date  
-  SPP_results$PP_sum[i] <- sum(temp_dataset$Catch_sum)
-  
+  SPP_results_fill$PP_sum[i] <- sum(temp_dataset$Catch_sum)
+  # add variable for number of days in pulse period
+  SPP_results_fill$PP_days <- PPdays
+} 
+# want to add each SPP_results_fill for each period length to one dataframe
+ifelse(j==1,
+       (SPP_results <- SPP_results_fill),
+       (SPP_results <- rbind(SPP_results,SPP_results_fill)))
 }
 # Sherwood Harbor trawl is not daily, so we won't get 11 values - only ~4
 # should still give a rough percentage of total catch, but coarser than daily data
 
 SPP_results$proportion <- SPP_results$PP_sum / SPP_results$Annual_sum
-colnames(SPP_results) <- c("Water Year","Date of Peak Catch",
-                           "Pulse Period Catch","Annual Catch",
-                           "Sac Water Year Type",
-                           "Catch Proportion during Pulse Period")
-write.csv(SPP_results, "SPP_results11.csv", row.names=FALSE)
+# optionally give pretty names to columns for presenting as table
+#colnames(SPP_results) <- c("Water Year","Date of Peak Catch",
+#                           "Pulse Period Catch","Annual Catch",
+#                           "Sac Water Year Type",
+#                           "Catch Proportion during Pulse Period","Pulse Period Length")
+#write.csv(SPP_results, "SPP_results.csv", row.names=FALSE)
+
+# PLOT 
+# line graph with line for each PP_days
+ggplot(SPP_results) +             # Create ggplot2 plot
+  geom_line(data=SPP_results, aes(x=WY, y=proportion*100, group = PP_days, col = PP_days))+
+  #geom_tile(data=SPP_results,aes(x=WY, y=max(proportion)*10/2,fill=as.factor(`Sac_Yr-type`)), # WY type as background color
+  #          height=max(SPP_results$proportion)*10,alpha=0.2)+
+  # alpha isn't working to lower transparency???
+  labs(title="Percentage of spring-run catch during peak migration", x="Water Year", 
+       y = "percentage of annual catch during pulse period") + labs(colour = "Days")
+
+
