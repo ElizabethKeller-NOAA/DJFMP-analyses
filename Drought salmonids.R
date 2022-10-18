@@ -243,7 +243,7 @@ ggplot(Trawl2.expanded_L[Trawl2.expanded_L$Location=="Chipps Island",],
 dev.off()
 
 # winter-run lengths only - both trawls
-tiff("Winter-run WYT lengths.tiff", width = 8, height = 8, units = 'in', res = 300)
+tiff("Winter-run WYT lengths.tiff", width = 8, height = 6, units = 'in', res = 300)
 ggplot(Trawl2.expanded_L[Trawl2.expanded_L$Species=="Winter-run Chinook salmon"&
                                (Trawl2.expanded_L$Location=="Chipps Island" |
                                   Trawl2.expanded_L$Location=="Sherwood Harbor"),],
@@ -253,7 +253,7 @@ ggplot(Trawl2.expanded_L[Trawl2.expanded_L$Species=="Winter-run Chinook salmon"&
   scale_color_manual(name = "Water Year Type",values=pal_yrtype) +
   geom_density_ridges(alpha = .3, scale=0.7) +
   labs(title = "Chipps Island Trawl Winter-run Chinook Lengths (1988-2021)", 
-       x = "Fork length", 
+       x = "Fork length (mm)", 
        y = "Trawl Location") + theme_bw()
 #dev.copy(svg,"Winter-run WYT lengths.svg")
 dev.off()
@@ -268,16 +268,6 @@ table(Chipps$Species) # not matching up
 Sherwood <- Trawl2.expanded[Trawl2.expanded$Location=="Sherwood Harbor",]
 table(Sherwood$Species)
 
-# for lengths
-Chipps <- Trawl2.expanded_L[Trawl2.expanded_L$Location=="Chipps Island",]
-table(Chipps$Species)
-Sherwood <- Trawl2.expanded_L[Trawl2.expanded_L$Location=="Sherwood Harbor",]
-table(Sherwood$Species)
-
-
-
-##########################################################################################################
-
 ## alternate timing sample size calculation
 Trawl2$SpeciesLocation <- paste(Trawl2$Species,Trawl2$Location)
 TSS <- Trawl2 %>%
@@ -288,6 +278,109 @@ TSS <- Trawl2 %>%
     Catch_sum = sum(Count)
   ) 
 TSS <-TSS[!duplicated(TSS),]
+
+# for lengths
+Chipps <- Trawl2.expanded_L[Trawl2.expanded_L$Location=="Chipps Island",]
+table(Chipps$Species)
+Sherwood <- Trawl2.expanded_L[Trawl2.expanded_L$Location=="Sherwood Harbor",]
+table(Sherwood$Species)
+
+#####################
+# Boxplots for Evan #
+#   escapement/CRR  #
+#####################
+
+# CRR data
+# winter-run
+WR_CRR <- 
+  read_excel("Grandtab WR FR SR CRR v2.xlsx",
+             sheet = "WR 2022")
+# spring-run
+SR_CRR <- 
+  read_excel("Grandtab WR FR SR CRR v2.xlsx",
+             sheet = "SR 2022")
+# Fall-run
+FR_CRR <- 
+  read_excel("Grandtab WR FR SR CRR v2.xlsx",
+             sheet = "CV FR 2022")
+
+# need to make WYT an ordered factor
+WR_CRR$WYT <- factor(WR_CRR$WYT, levels=c("C","D","BN","AN","W"), ordered=TRUE)
+SR_CRR$WYT <- factor(SR_CRR$WYT, levels=c("C","D","BN","AN","W"), ordered=TRUE)
+FR_CRR$WYT <- factor(FR_CRR$WYT, levels=c("C","D","BN","AN","W"), ordered=TRUE)
+
+########################
+# by DROUGHT year type #
+########################
+
+tiff("Winter-run CRR D.tiff", width = 8, height = 6, units = 'in', res = 300)
+ggplot(WR_CRR, aes(x=Drought, y=CRR, fill=Drought)) + 
+  geom_boxplot() +theme_bw() + scale_fill_manual(values=pal_drought, labels=c('Dry', 'Neutral', 'Wet'))+
+  labs(title = "Age Structure Winter-run CRR 1974-2021", 
+       x = "Juvenile migration drought year type", 
+       y = "Cohort Replacement Rate (CRR)")+
+  stat_summary(fun=mean, geom="point", shape=4, size=2, color="black")
+#dev.copy(svg,"C:/Users/Elizabeth.keller/Desktop/DCP/Drought data/Winter-run CRR.svg")
+dev.off()
+
+tiff("Sring-run CRR D.tiff", width = 8, height = 6, units = 'in', res = 300)
+ggplot(SR_CRR, aes(x=Drought, y=CRR, fill=Drought)) + 
+  geom_boxplot() +theme_bw() + scale_fill_manual(values=pal_drought, labels=c('Dry', 'Neutral', 'Wet'))+
+  labs(title = "Age Structure Spring-run CRR 1974-2021", 
+       x = "Juvenile migration drought year type", 
+       y = "Cohort Replacement Rate (CRR)")+
+  stat_summary(fun=mean, geom="point", shape=4, size=2, color="black")
+#dev.copy(svg,"C:/Users/Elizabeth.keller/Desktop/DCP/Drought data/Spring-run CRR.svg")
+dev.off()
+
+tiff("Fall-run CRR D.tiff", width = 8, height = 6, units = 'in', res = 300)
+ggplot(FR_CRR, aes(x=Drought, y=CRR, fill=Drought)) + 
+  geom_boxplot() +theme_bw() + scale_fill_manual(values=pal_drought, labels=c('Dry', 'Neutral', 'Wet'))+
+  labs(title = "Age Structure Fall-run CRR 1974-2021", 
+       x = "Juvenile migration drought year type", 
+       y = "Cohort Replacement Rate (CRR)")+
+  stat_summary(fun=mean, geom="point", shape=4, size=2, color="black")
+#dev.copy(svg,"C:/Users/Elizabeth.keller/Desktop/DCP/Drought data/Fall-run CRR.svg")
+dev.off()
+
+############################
+# by WATER YEAR TYPE (WYT) #
+############################
+
+tiff("Winter-run CRR WYT.tiff", width = 8, height = 4, units = 'in', res = 300)
+ggplot(WR_CRR, aes(x=WYT, y=CRR, fill=WYT)) + 
+  geom_boxplot() +theme_bw() + scale_fill_manual(values=pal_yrtype2, labels=c(
+    'Critical','Dry','Below Normal','Above Normal','Wet'))+
+  labs(title = "Age Structure Winter-run CRR 1974-2021", 
+       x = "Juvenile migration water year type", 
+       y = "Cohort Replacement Rate (CRR)")+
+  stat_summary(fun=mean, geom="point", shape=4, size=2, color="black")
+dev.off()
+
+tiff("Sring-run CRR WYT.tiff", width = 8, height = 4, units = 'in', res = 300)
+ggplot(SR_CRR, aes(x=WYT, y=CRR, fill=WYT)) + 
+  geom_boxplot() +theme_bw() + scale_fill_manual(values=pal_yrtype2, labels=c(
+    'Critical','Dry','Below Normal','Above Normal','Wet'))+
+  labs(title = "Age Structure Spring-run CRR 1974-2021", 
+       x = "Juvenile migration water year type", 
+       y = "Cohort Replacement Rate (CRR)")+
+  stat_summary(fun=mean, geom="point", shape=4, size=2, color="black")
+dev.off()
+
+tiff("Fall-run CRR WYT.tiff", width = 8, height = 4, units = 'in', res = 300)
+ggplot(FR_CRR, aes(x=WYT, y=CRR, fill=WYT)) + 
+  geom_boxplot() +theme_bw() + scale_fill_manual(values=pal_yrtype2, labels=c(
+    'Critical','Dry','Below Normal','Above Normal','Wet'))+
+  labs(title = "Age Structure Fall-run CRR 1974-2021", 
+       x = "Juvenile migration water year type", 
+       y = "Cohort Replacement Rate (CRR)")+
+  stat_summary(fun=mean, geom="point", shape=4, size=2, color="black")
+dev.off()
+
+
+##############################################################################################
+# not used
+
 
 ##############
 # summarized #
