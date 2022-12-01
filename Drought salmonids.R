@@ -377,6 +377,125 @@ ggplot(FR_CRR, aes(x=WYT, y=CRR, fill=WYT)) +
   stat_summary(fun=mean, geom="point", shape=4, size=2, color="black")
 dev.off()
 
+##############################
+# SacPAS migration duration #
+##############################
+
+# read data - multiple files
+# create list of files in folder
+# outdated #file_list <- list.files(path = "C:/Users/elizabeth.keller/Documents/GitHub/DJFMP-analyses/SacPAS")
+file_list <- list.files(path = "C:/Users/elizabeth.keller/Documents/GitHub/DJFMP-analyses/SacPAS 20221117")
+
+# read in all files in the folder and combine
+for (file in file_list){
+  
+  # if the merged dataset doesn't exist, create it
+  if (file==file_list[1]){
+    dataset <- read.csv(here(paste("./SacPAS 20221117/",file,sep="")), header=TRUE, stringsAsFactors = F)
+    dataset <- dataset[-(1:3),]
+    dataset$filename <- file # add filename as a column
+  }
+  
+  # if the merged dataset does exist, append to it
+  if (file!=file_list[1]){
+    temp_dataset <-read.csv(here(paste("./SacPAS 20221117/",file,sep="")), header=TRUE, stringsAsFactors = F)
+    temp_dataset <- temp_dataset[-(1:3),]
+    temp_dataset$filename <- file
+    dataset<-rbind(dataset, temp_dataset)
+    rm(temp_dataset)
+  }
+}
+
+# add water year stats
+# check brood year to water year math for each run
+dataset$WY <- as.numeric(dataset$Brood.Year)+1
+dataset <- left_join(dataset, WaterYr)
+
+## fix some variable types
+# should be number
+dataset$Run.Size <- as.numeric(dataset$Run.Size)
+# should be factors
+dataset$`Sac_Yr-type` <- factor(dataset$`Sac_Yr-type`, 
+                                      levels=c("C","D","BN","AN","W"), 
+                                      ordered=TRUE)
+dataset$`SJ_Yr-type` <- factor(dataset$`SJ_Yr-type`, 
+                                     levels=c("C","D","BN","AN","W"), 
+                                     ordered=TRUE)
+#rename
+colnames(dataset)[19] <- "Sac_Yr_type"
+colnames(dataset)[21] <- "SJ_Yr_type"
+
+# dates should be dates
+dataset[,c("FirstPassageDate",      "X5.PassageDate",        "X10.PassageDate",      
+      "X25.PassageDate",       "X50.PassageDate",       "X75.PassageDate",       "X90.PassageDate",      
+      "X95.PassageDate",       "LastPassageDate")] <- 
+  lapply(dataset[,c("FirstPassageDate",      "X5.PassageDate",        "X10.PassageDate",      
+               "X25.PassageDate",       "X50.PassageDate",       "X75.PassageDate",       "X90.PassageDate",      
+               "X95.PassageDate",       "LastPassageDate")],
+                                function(x) as.Date(x, format="%m/%d/%Y"))
+
+# split filename into location and species/run
+df <- data.frame(dataset$filename)
+test <- df %>% separate(dataset.filename, c("Location", "Species","other"), sep=" ")
+dataset <- cbind(dataset,test)
+
+#remove 2022 because no WYT assigned
+dataset <- dataset[dataset$WY < 2022,]
+
+# box plots of migration duration
+# separate by species/run and location; also will be different by duration days/percentage
+# steelhead has an annoying outlier, removing for now
+ggplot(dataset[!dataset$Species=="steelhead"&dataset$Location=="Sherwood",], aes(x=Sac_Yr_type, y=DurationMiddle50.Days, fill=Sac_Yr_type)) + 
+  geom_boxplot() +theme_bw() + scale_fill_manual(values=pal_yrtype2, labels=c(
+    'Critical','Dry','Below Normal','Above Normal','Wet'))+
+  labs(title = "Duration Middle 50% Days - Sherwood Harbor  (WY 1998 - 2021)", 
+       x = "Sacramento water year type", 
+       y = "Duration of middle 50% days")+
+  stat_summary(fun=mean, geom="point", shape=4, size=2, color="black")+
+  facet_wrap(~Species)
+
+ggplot(dataset[!dataset$Species=="steelhead"&dataset$Location=="Chipps",], aes(x=Sac_Yr_type, y=DurationMiddle50.Days, fill=Sac_Yr_type)) + 
+  geom_boxplot() +theme_bw() + scale_fill_manual(values=pal_yrtype2, labels=c(
+    'Critical','Dry','Below Normal','Above Normal','Wet'))+
+  labs(title = "Duration Middle 50% Days - Chipps Island (WY 1998 - 2021)", 
+       x = "Sacramento water year type", 
+       y = "Duration of middle 50% days")+
+  stat_summary(fun=mean, geom="point", shape=4, size=2, color="black")+
+  facet_wrap(~Species)
+
+
+# amount of time in Delta/ time between Delta entry and exit
+
+# reform dataset, so each row is a species/year to substract dates
+# add species/year variable
+dataset$SpeciesWY <- paste(dataset$Species,dataset$WY)
+Sherwood <- dataset[dataset$Location=="Sherwood",c(1:10,14,17:21,23,25)]
+Chipps <- dataset[dataset$Location=="Chipps",c(1:10,14,17:21,23,25)]
+
+Delta <- inner_join(Sherwood, Chipps, by="SpeciesWY")
+# create Delta duration variables
+Delta$Duration50.Delta <- Delta$X50.PassageDate.y - Delta$X50.PassageDate.x
+
+
+ggplot(Delta[Delta$Species.x=="winter-run",], aes(x=Sac_Yr_type.x, y=Duration50.Delta, fill=Sac_Yr_type.x)) + 
+  geom_boxplot() +theme_bw() + scale_fill_manual(values=pal_yrtype2, labels=c(
+    'Critical','Dry','Below Normal','Above Normal','Wet'))+
+  labs(title = "Duration Middle 50 Days - Delta, winter-run", 
+       x = "Sacramento water year type", 
+       y = "Duration of middle 50 days")+
+  stat_summary(fun=mean, geom="point", shape=4, size=2, color="black")
+
+
+# try grouped by species
+# removing steelhead due to numerous years with negative value (50% catch at Chipps happened before 50% at Sherwood)
+ggplot(Delta[!Delta$Species.x=="steelhead",], aes(x=Sac_Yr_type.x, y=Duration50.Delta, fill=Sac_Yr_type.x)) + 
+  geom_boxplot() +theme_bw() + scale_fill_manual(values=pal_yrtype2, labels=c(
+    'Critical','Dry','Below Normal','Above Normal','Wet'))+
+  labs(title = "Migration Duration through the Delta (WY 1998-2021)", 
+       x = "Sacramento water year type", 
+       y = "Days between 50% passage at Sherwood and Chipps")+
+  stat_summary(fun=mean, geom="point", shape=4, size=2, color="black")+
+  facet_wrap(~Species.x)
 
 ##############################################################################################
 # not used

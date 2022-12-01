@@ -1,27 +1,27 @@
 {
-    "id": "F7D87627",
+    "id": "7BE58A10",
     "path": "~/GitHub/DJFMP-analyses/Drought salmonids.R",
     "project_path": "Drought salmonids.R",
     "type": "r_source",
-    "hash": "2402328905",
+    "hash": "3895486211",
     "contents": "",
     "dirty": false,
-    "created": 1663956696407.0,
+    "created": 1667582778503.0,
     "source_on_save": false,
-    "relative_order": 2,
+    "relative_order": 1,
     "properties": {
         "tempName": "Untitled1",
         "source_window_id": "",
         "Source": "Source",
-        "cursorPosition": "207,32",
-        "scrollLine": "192"
+        "cursorPosition": "477,0",
+        "scrollLine": "458"
     },
-    "folds": "",
-    "lastKnownWriteTime": 1665621964,
+    "folds": "183|22|259|0|\n313|24|344|0|\n481|14|483|14|\n484|14|510|0|\n",
+    "lastKnownWriteTime": 1668531890,
     "encoding": "UTF-8",
     "collab_server": "",
     "source_window": "",
-    "last_content_update": 1665621964814,
+    "last_content_update": 1668531890920,
     "read_only": false,
     "read_only_alternatives": []
 }
