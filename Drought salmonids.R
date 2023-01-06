@@ -177,16 +177,23 @@ Trawl2 <- rbind(Trawl2,interest_samples) #
 # expand rows to account for Catch
 Trawl2.expanded <- Trawl2[rep(row.names(Trawl2), Trawl2$Count), ]
 
+# rerunning the code and the WYT is not ordered factor...
+# let's fix that
+Trawl2.expanded$Yr_type <- factor(Trawl2.expanded$Yr_type, levels=c("Wet","Above Normal","Below Normal","Dry","Critical"), ordered=TRUE)
+
+
 
 ######################
 #        PLOTS       #
 # Timing and Lengths #
 ######################
 
+# for fall-, spring-, and winter-run Chinook salmon only for manuscript
+
 # Migration timing
 # Sherwood Harbor
-tiff("Sherwood WYT timing.tiff", width = 8, height = 8, units = 'in', res = 300)
-ggplot(Trawl2.expanded[Trawl2.expanded$Location=="Sherwood Harbor" & Trawl2.expanded$WY > 1987,],
+#tiff("Sherwood WYT timing.tiff", width = 8, height = 8, units = 'in', res = 300)
+ggplot(Trawl2.expanded[Trawl2.expanded$Location=="Sherwood Harbor" & Trawl2.expanded$WY > 1987 & Trawl2.expanded$Species %in% c("Fall-run Chinook salmon","Spring-run Chinook salmon","Winter-run Chinook salmon"),],
        aes(x = wtr_day, y = Species, 
            color = Yr_type, 
            fill = Yr_type)) +scale_fill_manual(name = "Water Year Type",values=pal_yrtype) +
@@ -195,12 +202,13 @@ ggplot(Trawl2.expanded[Trawl2.expanded$Location=="Sherwood Harbor" & Trawl2.expa
   labs(title = "Sherwood Harbor Trawl Migration Timing (1988-2021)", 
        x = "Day of the water year", 
        y = "Species") + theme_bw()
+ggsave("Sherwood WYT timing.tiff", device = "tiff", width = 7, height = 6, units = "in")
 #dev.copy(svg,"Sherwood WYT timing.svg")
-dev.off()
+#dev.off()
 
 # Chipps Island
-tiff("Chipps WYT timing.tiff", width = 8, height = 8, units = 'in', res = 300)
-ggplot(Trawl2.expanded[Trawl2.expanded$Location=="Chipps Island",],
+#tiff("Chipps WYT timing.tiff", width = 8, height = 8, units = 'in', res = 300)
+ggplot(Trawl2.expanded[Trawl2.expanded$Location=="Chipps Island" & Trawl2.expanded$Species %in% c("Fall-run Chinook salmon","Spring-run Chinook salmon","Winter-run Chinook salmon"),],
        aes(x = wtr_day, y = Species, 
            color = Yr_type, 
            fill = Yr_type)) +scale_fill_manual(name = "Water Year Type",values=pal_yrtype) +
@@ -209,8 +217,9 @@ ggplot(Trawl2.expanded[Trawl2.expanded$Location=="Chipps Island",],
   labs(title = "Chipps Island Trawl Migration Timing (1988-2021)", 
        x = "Day of the water year", 
        y = "Species") + theme_bw()
+ggsave("Chipps WYT timing.tiff", device = "tiff", width = 7, height = 6, units = "in")
 #dev.copy(svg,"Chipps WYT timing.svg")
-dev.off()
+#dev.off()
 
 # Lengths
 Trawl2.expanded_L <- Trawl2.expanded[Trawl2.expanded$ForkLength>0 & !is.na(Trawl2.expanded$ForkLength),]
@@ -243,7 +252,7 @@ ggplot(Trawl2.expanded_L[Trawl2.expanded_L$Location=="Chipps Island",],
 dev.off()
 
 # winter-run lengths only - both trawls
-tiff("Winter-run WYT lengths.tiff", width = 8, height = 6, units = 'in', res = 300)
+#tiff("Winter-run WYT lengths.tiff", width = 8, height = 6, units = 'in', res = 300)
 ggplot(Trawl2.expanded_L[Trawl2.expanded_L$Species=="Winter-run Chinook salmon"&
                                (Trawl2.expanded_L$Location=="Chipps Island" |
                                   Trawl2.expanded_L$Location=="Sherwood Harbor"),],
@@ -255,8 +264,9 @@ ggplot(Trawl2.expanded_L[Trawl2.expanded_L$Species=="Winter-run Chinook salmon"&
   labs(title = "Chipps Island Trawl Winter-run Chinook Lengths (1988-2021)", 
        x = "Fork length (mm)", 
        y = "Trawl Location") + theme_bw()
+ggsave("Winter-run WYT lengths.tiff", device = "tiff", width = 7, height = 6, units = "in")
 #dev.copy(svg,"Winter-run WYT lengths.svg")
-dev.off()
+#dev.off()
 
 ############
 # sample sizes
@@ -376,6 +386,78 @@ ggplot(FR_CRR, aes(x=WYT, y=CRR, fill=WYT)) +
        y = "Cohort Replacement Rate (CRR)")+
   stat_summary(fun=mean, geom="point", shape=4, size=2, color="black")
 dev.off()
+
+##############################
+#      CRR WYT boxplots      #
+#    pairwise comparisons    #
+# incomplete **************************************
+##############################
+# boxplot w pairwise comparisons
+
+# all comparisons
+# list(c("C","W"),c("D","W"),c("BN","W"),c("AN","W"),c("C", "AN"), c("D", "AN"),c("BN", "AN"), c("C", "BN"),c("D","BN"),c("C","D"))
+
+library(ggsignif)
+
+# winter-run
+ggplot(WR_CRR, aes(x=WYT, y=CRR, fill=WYT)) +
+  ylim(-0.5, (max(WR_CRR$CRR)+2)) + # was (0, 15)
+  geom_boxplot() +
+  geom_signif( # add the significance markers
+    comparisons = list(c("C","W")),
+    y_position = c(7),
+    map_signif_level = TRUE,
+    textsize = 8
+  ) +
+  scale_fill_manual(values = pal_yrtype2, labels=c(
+    'Critical','Dry','Below Normal','Above Normal','Wet')) +
+  labs(title = "Winter-run Cohort Replacement Rate 1974-2021", 
+       x = "Juvenile migration water year type", 
+       y = "Cohort Replacement Rate (CRR)",
+       fill = "Water Year Type") +
+  theme_bw()
+ggsave("Winter-run CRR WYT.tiff", device = "tiff", width = 7, height = 6, units = "in")
+
+# spring-run
+ggplot(SR_CRR, aes(x=WYT, y=CRR, fill=WYT)) +
+  ylim(-0.5, (max(SR_CRR$CRR)+6)) + # was (0, 15)
+  geom_boxplot() +
+  geom_signif( # add the significance markers
+    comparisons = list(c("C","W"),c("D","W"),c("C", "AN"), c("D", "AN"), c("C", "BN")),
+    y_position = c(11,10, 9, 8, 7),
+    map_signif_level = TRUE,
+    textsize = 8
+  ) +
+  scale_fill_manual(values = pal_yrtype2, labels=c(
+    'Critical','Dry','Below Normal','Above Normal','Wet')) +
+  labs(title = "Spring-run Cohort Replacement Rate 1974-2021", 
+       x = "Juvenile migration water year type", 
+       y = "Cohort Replacement Rate (CRR)",
+       fill = "Water Year Type") +
+  theme_bw()
+ggsave("Spring-run CRR WYT.tiff", device = "tiff", width = 7, height = 6, units = "in")
+
+# fall-run
+ggplot(FR_CRR, aes(x=WYT, y=CRR, fill=WYT)) +
+  ylim(-0.5, (max(FR_CRR$CRR)+2)) + # was (0, 15)
+  geom_boxplot() +
+  geom_signif( # add the significance markers
+    comparisons = list(c("C","W")),
+    y_position = c(max(FR_CRR$CRR)+1),
+    annotation = "pairwise comparisons NS", 
+    tip_length = 0,
+    map_signif_level = TRUE,
+    textsize = 8
+  ) +
+  scale_fill_manual(values = pal_yrtype2, labels=c(
+    'Critical','Dry','Below Normal','Above Normal','Wet')) +
+  labs(title = "Fall-run Cohort Replacement Rate 1974-2021", 
+       x = "Juvenile migration water year type", 
+       y = "Cohort Replacement Rate (CRR)",
+       fill = "Water Year Type") +
+  theme_bw()
+ggsave("Fall-run CRR WYT.tiff", device = "tiff", width = 7, height = 5, units = "in")
+
 
 ##############################
 # SacPAS migration duration #
