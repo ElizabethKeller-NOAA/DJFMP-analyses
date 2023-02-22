@@ -533,8 +533,8 @@ springCRR <- ggplot(SR_CRR, aes(x=WYT, y=CRR, fill=WYT)) +
     map_signif_level = TRUE,
     textsize = 5
   ) +
-  #scale_fill_manual(values = pal_yrtype2, labels=c(
-  #  'Critical','Dry','Below Normal','Above Normal','Wet')) +
+  scale_fill_manual(values = pal_yrtype2, labels=c(
+    'Critical','Dry','Below Normal','Above Normal','Wet')) +
   labs(title = "Spring-run", 
        x = "Juvenile migration water year type", 
        y = "CRR",
