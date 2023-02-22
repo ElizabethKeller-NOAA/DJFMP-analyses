@@ -201,7 +201,8 @@ ggplot(Trawl2.expanded[Trawl2.expanded$Location=="Sherwood Harbor" & Trawl2.expa
   geom_density_ridges(alpha = .3, scale=0.95) +
   labs(title = "Sherwood Harbor Trawl Migration Timing (1988-2021)", 
        x = "Day of the water year", 
-       y = "Species") + theme_bw()
+       y = "Run Type") + theme_bw() +
+  scale_y_discrete(labels = c("Winter-run","Spring-run","Fall-run")) # don't need full species, just run
 ggsave("Sherwood WYT timing.tiff", device = "tiff", width = 7, height = 6, units = "in")
 #dev.copy(svg,"Sherwood WYT timing.svg")
 #dev.off()
@@ -216,10 +217,25 @@ ggplot(Trawl2.expanded[Trawl2.expanded$Location=="Chipps Island" & Trawl2.expand
   geom_density_ridges(alpha = .3, scale=0.95) +
   labs(title = "Chipps Island Trawl Migration Timing (1988-2021)", 
        x = "Day of the water year", 
-       y = "Species") + theme_bw()
+       y = "Run Type") + theme_bw() +
+  scale_y_discrete(labels = c("Winter-run","Spring-run","Fall-run")) # don't need full species, just run
 ggsave("Chipps WYT timing.tiff", device = "tiff", width = 7, height = 6, units = "in")
 #dev.copy(svg,"Chipps WYT timing.svg")
 #dev.off()
+
+# both trawl locations in one figure - final manuscript figure
+ggplot(Trawl2.expanded[Trawl2.expanded$Species %in% c("Fall-run Chinook salmon","Spring-run Chinook salmon","Winter-run Chinook salmon"),],
+       aes(x = wtr_day, y = Species, 
+           color = Yr_type, 
+           fill = Yr_type)) +scale_fill_manual(name = "Water Year Type",values=pal_yrtype) +
+  scale_color_manual(name = "Water Year Type",values=pal_yrtype) +
+  geom_density_ridges(alpha = .3, scale=0.95) +
+  labs(title = "Chinook Salmon Trawl Catch Timing (1988-2021)", 
+       x = "Day of the water year", 
+       y = "Run Type") + theme_bw() +
+  scale_y_discrete(labels = c("Winter-run","Spring-run","Fall-run")) + 
+  facet_wrap(~Location)
+ggsave("Trawls WYT timing.tiff", device = "tiff", width = 8, height = 6, units = "in")
 
 # Lengths
 Trawl2.expanded_L <- Trawl2.expanded[Trawl2.expanded$ForkLength>0 & !is.na(Trawl2.expanded$ForkLength),]
@@ -261,12 +277,35 @@ ggplot(Trawl2.expanded_L[Trawl2.expanded_L$Species=="Winter-run Chinook salmon"&
            fill = Yr_type)) +scale_fill_manual(name = "Water Year Type",values=pal_yrtype) +
   scale_color_manual(name = "Water Year Type",values=pal_yrtype) +
   geom_density_ridges(alpha = .3, scale=0.7) +
-  labs(title = "Chipps Island Trawl Winter-run Chinook Lengths (1988-2021)", 
+  labs(title = "Winter-run Chinook Lengths (1988-2021)", 
        x = "Fork length (mm)", 
        y = "Trawl Location") + theme_bw()
 ggsave("Winter-run WYT lengths.tiff", device = "tiff", width = 7, height = 6, units = "in")
 #dev.copy(svg,"Winter-run WYT lengths.svg")
 #dev.off()
+
+#####################
+# lengths vs timing #
+#####################
+
+test <- Trawl2.expanded_L[Trawl2.expanded_L$Species=="Winter-run Chinook salmon"&
+                            (Trawl2.expanded_L$Location=="Sherwood Harbor"),]
+
+# are those smaller fish at Sherwood during dry and BN years the same ones that appear early in the water year? 
+ggplot(Trawl2.expanded_L[Trawl2.expanded_L$Species=="Winter-run Chinook salmon"&
+                           (Trawl2.expanded_L$Location=="Sherwood Harbor"),],
+       aes(x = wtr_day, y = ForkLength, 
+           color = Yr_type, 
+           #fill = Yr_type, 
+           #alpha=0.2
+           )) +
+  geom_point()+
+  #scale_fill_manual(name = "Water Year Type",values=pal_yrtype) +
+  scale_color_manual(name = "Water Year Type",values=pal_yrtype) +
+  labs(title = "Sherwood Harbor Winter-run Chinook Lengths (1988-2021)", 
+       x = "Day of the water year", 
+       y = "Fork length (mm)") + theme_bw()
+ggsave("Sherwood Winter-run lengths timing.tiff", device = "tiff", width = 7, height = 5, units = "in")
 
 ############
 # sample sizes
@@ -457,6 +496,104 @@ ggplot(FR_CRR, aes(x=WYT, y=CRR, fill=WYT)) +
        fill = "Water Year Type") +
   theme_bw()
 ggsave("Fall-run CRR WYT.tiff", device = "tiff", width = 7, height = 5, units = "in")
+
+########################
+# CRR boxplots
+# pairwise comparisons #
+# panel plot
+########################
+library(gridExtra)
+
+# fix the individual plots how I want them
+# winter-run
+winterCRR <- ggplot(WR_CRR, aes(x=WYT, y=CRR, fill=WYT)) +
+  ylim(-0.5, (max(WR_CRR$CRR)+2)) + # was (0, 15)
+  geom_boxplot(show.legend = FALSE) +
+  geom_signif( # add the significance markers
+    comparisons = list(c("C","W")),
+    y_position = c(6.5),
+    map_signif_level = TRUE,
+    textsize = 5
+  ) +
+  scale_fill_manual(values = pal_yrtype2, labels=c(
+    'Critical','Dry','Below Normal','Above Normal','Wet')) +
+  labs(title = "Winter-run", 
+       x = "Juvenile migration water year type", 
+       y = "CRR",
+       fill = "Water Year Type") +
+  theme_bw()
+
+# spring-run
+springCRR <- ggplot(SR_CRR, aes(x=WYT, y=CRR, fill=WYT)) +
+  ylim(-0.5, (max(SR_CRR$CRR)+6)) + # was (0, 15)
+  geom_boxplot(show.legend = FALSE) +
+  geom_signif( # add the significance markers
+    comparisons = list(c("C","W"),c("D","W"),c("C", "AN"), c("D", "AN"), c("C", "BN")),
+    y_position = c(10.7, 9.4, 8.1, 6.8,5.5),
+    map_signif_level = TRUE,
+    textsize = 5
+  ) +
+  #scale_fill_manual(values = pal_yrtype2, labels=c(
+  #  'Critical','Dry','Below Normal','Above Normal','Wet')) +
+  labs(title = "Spring-run", 
+       x = "Juvenile migration water year type", 
+       y = "CRR",
+       fill = "Water Year Type") +
+  theme_bw()
+
+# fall-run
+fallCRR <- ggplot(FR_CRR, aes(x=WYT, y=CRR, fill=WYT)) +
+  ylim(-0.5, (max(FR_CRR$CRR)+2)) + # was (0, 15)
+  geom_boxplot(show.legend = FALSE) +
+  geom_signif( # add the significance markers
+    comparisons = list(c("C","W")),
+    y_position = c(max(FR_CRR$CRR)+1),
+    annotation = "pairwise comparisons NS", 
+    tip_length = 0,
+    map_signif_level = TRUE,
+    textsize = 4
+  ) +
+  scale_fill_manual(values = pal_yrtype2, labels=c(
+    'Critical','Dry','Below Normal','Above Normal','Wet')) +
+  labs(title = "Fall-run", 
+       x = "Juvenile migration water year type", 
+       y = "CRR",
+       fill = "Water Year Type") +
+  theme_bw()
+
+# Create user-defined function, which extracts legends from ggplots
+extract_legend <- function(my_ggp) {
+  step1 <- ggplot_gtable(ggplot_build(my_ggp))
+  step2 <- which(sapply(step1$grobs, function(x) x$name) == "guide-box")
+  step3 <- step1$grobs[[step2]]
+  return(step3)
+}
+# winter-run WITH LEGEND
+winterCRR_legend <- ggplot(WR_CRR, aes(x=WYT, y=CRR, fill=WYT)) +
+  ylim(-0.5, (max(WR_CRR$CRR)+2)) + # was (0, 15)
+  geom_boxplot() +
+  geom_signif( # add the significance markers
+    comparisons = list(c("C","W")),
+    y_position = c(7),
+    map_signif_level = TRUE,
+    textsize = 4
+  ) +
+  scale_fill_manual(values = pal_yrtype2, labels=c(
+    'Critical','Dry','Below Normal','Above Normal','Wet')) +
+  labs(title = "Winter-run", 
+       x = "Juvenile migration water year type", 
+       y = "CRR",
+       fill = "Water Year Type") +
+  theme_bw()
+# Apply user-defined function to extract legend
+shared_legend <- extract_legend(winterCRR_legend)
+
+# Draw plots with shared legend
+library(grid)
+plot <- grid.arrange(arrangeGrob(winterCRR, springCRR, fallCRR,shared_legend, ncol = 2), top=textGrob("Chinook Salmon Cohort Replacement Rate (CRR) 1974-2021",gp=gpar(fontsize=20,font=1)))
+plot
+ggsave("CRR.tiff", plot, device = "tiff", width = 8, height = 6.5, units = "in")
+
 
 
 ##############################
