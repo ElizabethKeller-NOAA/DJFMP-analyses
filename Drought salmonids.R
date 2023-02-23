@@ -224,8 +224,12 @@ ggsave("Chipps WYT timing.tiff", device = "tiff", width = 7, height = 6, units =
 #dev.off()
 
 # both trawl locations in one figure - final manuscript figure
-ggplot(Trawl2.expanded[Trawl2.expanded$Species %in% c("Fall-run Chinook salmon","Spring-run Chinook salmon","Winter-run Chinook salmon"),],
-       aes(x = wtr_day, y = Species, 
+
+# add code to switch order of sites (Sherwood on left)
+Trawl2.expanded[Trawl2.expanded$Species %in% c("Fall-run Chinook salmon","Spring-run Chinook salmon","Winter-run Chinook salmon"),] %>%
+  mutate(across(Location, factor, levels=c("Sherwood Harbor","Chipps Island"))) %>%
+
+ggplot(aes(x = wtr_day, y = Species, 
            color = Yr_type, 
            fill = Yr_type)) +scale_fill_manual(name = "Water Year Type",values=pal_yrtype) +
   scale_color_manual(name = "Water Year Type",values=pal_yrtype) +
@@ -235,7 +239,7 @@ ggplot(Trawl2.expanded[Trawl2.expanded$Species %in% c("Fall-run Chinook salmon",
        y = "Run Type") + theme_bw() +
   scale_y_discrete(labels = c("Winter-run","Spring-run","Fall-run")) + 
   facet_wrap(~Location)
-ggsave("Trawls WYT timing.tiff", device = "tiff", width = 8, height = 6, units = "in")
+ggsave("Trawls WYT timing.tiff", device = "tiff", width = 9, height = 6, units = "in")
 
 # Lengths
 Trawl2.expanded_L <- Trawl2.expanded[Trawl2.expanded$ForkLength>0 & !is.na(Trawl2.expanded$ForkLength),]
