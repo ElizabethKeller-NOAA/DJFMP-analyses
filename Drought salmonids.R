@@ -69,7 +69,7 @@ dataset <- dataset %>%
 
 
 # Add water year type & drought period year type
-dataset <- left_join(dataset,DroughtYr[,c(1:4)], by="WY")
+dataset <- left_join(dataset,DroughtYr[,c(1:5)], by="WY")
 
 # clip dataset to stations we want: Chipps Island and Sherwood Trawl
 # and only trawl data
@@ -114,7 +114,8 @@ Trawl_sampledates <-Trawl %>%
     #ForkLength = ForkLength,
     wtr_day = wtr_day,
     Drought = Drought,
-    Yr_type = Yr_type
+    Yr_type = Yr_type,
+    DroughtYear = DroughtYear
   ) 
 #remove duplicate rows
 Trawl_sampledates <- Trawl_sampledates[!duplicated(Trawl_sampledates),]
@@ -181,6 +182,8 @@ Trawl2.expanded <- Trawl2[rep(row.names(Trawl2), Trawl2$Count), ]
 # let's fix that
 Trawl2.expanded$Yr_type <- factor(Trawl2.expanded$Yr_type, levels=c("Wet","Above Normal","Below Normal","Dry","Critical"), ordered=TRUE)
 
+# other dataset for winter-run lengths
+Trawl2.expanded_L <- Trawl2.expanded[Trawl2.expanded$ForkLength>0 & !is.na(Trawl2.expanded$ForkLength),]
 
 
 ######################
@@ -189,6 +192,61 @@ Trawl2.expanded$Yr_type <- factor(Trawl2.expanded$Yr_type, levels=c("Wet","Above
 ######################
 
 # for fall-, spring-, and winter-run Chinook salmon only for manuscript
+
+
+####################################
+## by multi-year drought year type #
+####################################
+
+# migration timing at Sherwood and Chipps
+Trawl2.expanded[Trawl2.expanded$Species %in% c("Winter-run Chinook salmon","Spring-run Chinook salmon","Fall-run Chinook salmon"),] %>%
+  mutate(across(Location, factor, levels=c("Sherwood Harbor","Chipps Island"))) %>%
+  
+  ggplot(aes(x = wtr_day, y = Species, 
+             color = DroughtYear, 
+             fill = DroughtYear)) + scale_fill_brewer(name="Drought Year", palette = "Dark2", labels=c("Wet years", "First/only dry year","Second dry year","Three or more dry years")) +
+  scale_color_brewer(name="Drought Year", palette = "Dark2", labels=c("Wet years", "First/only dry year","Second dry year","Three or more dry years")) +
+  geom_density_ridges(alpha = .3, scale=0.95) +
+  labs(title = "Chinook Salmon Trawl Catch Timing (1988-2021)", 
+       x = "Day of the water year", 
+       y = "Run Type") + theme_bw() +
+  scale_y_discrete(labels = c("Fall-run","Spring-run","Winter-run")) + # labels bottom to top??
+  facet_wrap(~Location)
+ggsave("Trawls DroughtYear timing.tiff", device = "tiff", width = 9, height = 6, units = "in")
+
+# winter-run lengths at Sherwood and Chipps
+# winter-run lengths only - both trawls
+#tiff("Winter-run WYT lengths.tiff", width = 8, height = 6, units = 'in', res = 300)
+ggplot(Trawl2.expanded_L[Trawl2.expanded_L$Species=="Winter-run Chinook salmon"&
+                           (Trawl2.expanded_L$Location=="Chipps Island" |
+                              Trawl2.expanded_L$Location=="Sherwood Harbor"),],
+       aes(x = ForkLength, y = Location, 
+           color = DroughtYear, 
+           fill = DroughtYear)) + scale_fill_brewer(name="Drought Year", palette = "Dark2", labels=c("Wet years", "First/only dry year","Second dry year","Three or more dry years")) +
+  scale_color_brewer(name="Drought Year", palette = "Dark2", labels=c("Wet years", "First/only dry year","Second dry year","Three or more dry years")) +
+  geom_density_ridges(alpha = .3, scale=0.7) +
+  labs(title = "Winter-run Chinook Lengths (1988-2021)", 
+       x = "Fork length (mm)", 
+       y = "Trawl Location") + theme_bw()
+ggsave("Winter-run DroughtYear lengths.tiff", device = "tiff", width = 7, height = 6, units = "in")
+
+# winter-run lengths vs day at Sherwood
+ggplot(Trawl2.expanded_L[Trawl2.expanded_L$Species=="Winter-run Chinook salmon"&
+                           (Trawl2.expanded_L$Location=="Sherwood Harbor"),],
+       aes(x = wtr_day, y = ForkLength, 
+           color = DroughtYear, 
+           #fill = Yr_type, 
+           #alpha=0.2
+       )) +
+  geom_point()+
+  #scale_fill_manual(name = "Water Year Type",values=pal_yrtype) +
+  scale_color_brewer(name="Drought Year", palette = "Dark2", labels=c("Wet years", "First/only dry year","Second dry year","Three or more dry years")) +
+  labs(title = "Sherwood Harbor Winter-run Chinook Lengths (1988-2021)", 
+       x = "Day of the water year", 
+       y = "Fork length (mm)") + theme_bw()
+ggsave("Sherwood Winter-run lengths timing DroughtYear.tiff", device = "tiff", width = 7, height = 5, units = "in")
+
+##############################################################################
 
 # Migration timing
 # Sherwood Harbor
@@ -223,10 +281,10 @@ ggsave("Chipps WYT timing.tiff", device = "tiff", width = 7, height = 6, units =
 #dev.copy(svg,"Chipps WYT timing.svg")
 #dev.off()
 
-# both trawl locations in one figure - final manuscript figure
+# both trawl locations in one figure - final manuscript figure (inital submission)
 
 # add code to switch order of sites (Sherwood on left)
-Trawl2.expanded[Trawl2.expanded$Species %in% c("Fall-run Chinook salmon","Spring-run Chinook salmon","Winter-run Chinook salmon"),] %>%
+Trawl2.expanded[Trawl2.expanded$Species %in% c("Winter-run Chinook salmon","Spring-run Chinook salmon","Fall-run Chinook salmon"),] %>%
   mutate(across(Location, factor, levels=c("Sherwood Harbor","Chipps Island"))) %>%
 
 ggplot(aes(x = wtr_day, y = Species, 
@@ -237,12 +295,11 @@ ggplot(aes(x = wtr_day, y = Species,
   labs(title = "Chinook Salmon Trawl Catch Timing (1988-2021)", 
        x = "Day of the water year", 
        y = "Run Type") + theme_bw() +
-  scale_y_discrete(labels = c("Winter-run","Spring-run","Fall-run")) + 
+  scale_y_discrete(labels = c("Fall-run","Spring-run","Winter-run")) + # labels bottom to top??
   facet_wrap(~Location)
 ggsave("Trawls WYT timing.tiff", device = "tiff", width = 9, height = 6, units = "in")
 
 # Lengths
-Trawl2.expanded_L <- Trawl2.expanded[Trawl2.expanded$ForkLength>0 & !is.na(Trawl2.expanded$ForkLength),]
 # Sherwood Harbor
 tiff("Sherwood WYT lengths.tiff", width = 8, height = 8, units = 'in', res = 300)
 ggplot(Trawl2.expanded_L[Trawl2.expanded_L$Location=="Sherwood Harbor",],
@@ -287,6 +344,7 @@ ggplot(Trawl2.expanded_L[Trawl2.expanded_L$Species=="Winter-run Chinook salmon"&
 ggsave("Winter-run WYT lengths.tiff", device = "tiff", width = 7, height = 6, units = "in")
 #dev.copy(svg,"Winter-run WYT lengths.svg")
 #dev.off()
+
 
 #####################
 # lengths vs timing #
