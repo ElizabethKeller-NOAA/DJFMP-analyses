@@ -198,7 +198,42 @@ Trawl2.expanded_L <- Trawl2.expanded[Trawl2.expanded$ForkLength>0 & !is.na(Trawl
 ## by multi-year drought year type #
 ####################################
 
+# migration timing histograms - WR, Sherwood
+Trawl2.expanded[(Trawl2.expanded$Species %in% c("Winter-run Chinook salmon") & Trawl2.expanded$Location %in% c("Sherwood Harbor"))#,"Spring-run Chinook salmon","Fall-run Chinook salmon"
+                                               ,] %>%
+  mutate(across(Location, factor, levels=c("Sherwood Harbor"#,"Chipps Island"
+                                           ))) %>%
+  
+ggplot(aes(x = wtr_day, fill = DroughtYear)) +
+  scale_fill_brewer(name="Drought Year", palette = "Dark2", labels=c("Wet years", "First/only dry year","Second dry year","Three or more dry years")) +
+  geom_histogram(position = "identity", alpha = 0.4, bins = 100)
+
+################
+# polygons?
+#################
+# migration timing at Sherwood, WR
+
+Trawl2.expanded[(Trawl2.expanded$Species %in% c("Winter-run Chinook salmon") & Trawl2.expanded$Location %in% c("Sherwood Harbor"))#,"Spring-run Chinook salmon","Fall-run Chinook salmon"
+                ,] %>%
+  mutate(across(Location, factor, levels=c("Sherwood Harbor"#,"Chipps Island"
+  ))) %>%
+  
+  ggplot(aes(x = wtr_day, color = DroughtYear, 
+                       fill = DroughtYear)) +
+  geom_freqpoly(binwidth = 10) +
+  scale_fill_brewer(name="Drought Year", palette = "Dark2", labels=c("Wet years", "First/only dry year","Second dry year","Three or more dry years")) +
+  scale_color_brewer(name="Drought Year", palette = "Dark2", labels=c("Wet years", "First/only dry year","Second dry year","Three or more dry years")) +
+  labs(title = "WR Chinook - Sherwood", 
+       x = "Day of the water year", 
+       y = "Frequency") + theme_bw() #+
+  #scale_y_discrete(labels = c("Fall-run","Spring-run","Winter-run")) + # labels bottom to top??
+  #facet_wrap(~Location)
+#ggsave("Trawls DroughtYear timing.tiff", device = "tiff", width = 9, height = 6, units = "in")
+
+
+################
 # migration timing at Sherwood and Chipps
+# density ridges
 Trawl2.expanded[Trawl2.expanded$Species %in% c("Winter-run Chinook salmon","Spring-run Chinook salmon","Fall-run Chinook salmon"),] %>%
   mutate(across(Location, factor, levels=c("Sherwood Harbor","Chipps Island"))) %>%
   
@@ -811,3 +846,61 @@ Trawl_summary <- Trawl2 %>%
   ) 
 #remove duplicate rows
 Trawl_summary <-Trawl_summary[!duplicated(Trawl_summary),]
+
+###############
+# some new work 11/2/2023
+##########
+
+# Sherwood winter-run density ridges by year
+# density ridges
+Trawl2.expanded[Trawl2.expanded$Species %in% c("Winter-run Chinook salmon"#,"Spring-run Chinook salmon","Fall-run Chinook salmon"
+),] %>%
+  mutate(across(Location, factor, levels=c("Sherwood Harbor"#,"Chipps Island"
+  ))) %>%
+  
+  ggplot(aes(x = wtr_day, y = as.factor(WY),color = DroughtYear, fill = DroughtYear)) + scale_fill_brewer(name="Drought Year", palette = "Dark2", labels=c("Wet years", "First/only dry year","Second dry year","Three or more dry years")) +
+  scale_color_brewer(name="Drought Year", palette = "Dark2", labels=c("Wet years", "First/only dry year","Second dry year","Three or more dry years")) +
+  geom_density_ridges(alpha=0,scale=0.95) +
+  labs(title = "Sherwood Harbor WR (1988-2021)", 
+       x = "Day of the water year", 
+       y = "Water Year") + theme_bw() + xlim(15,345)
+ggsave("Sherwood WR by WY.tiff", device = "tiff", width = 6, height = 25, units = "in")
+
+
+# Sherwood winter-run histograms by year
+# migration timing histograms - WR, Sherwood
+Trawl2.expanded[(Trawl2.expanded$Species %in% c("Winter-run Chinook salmon") & Trawl2.expanded$Location %in% c("Sherwood Harbor"))#,"Spring-run Chinook salmon","Fall-run Chinook salmon"
+                ,] %>%
+  mutate(across(Location, factor, levels=c("Sherwood Harbor"#,"Chipps Island"
+  ))) %>%
+  
+  ggplot(aes(x = wtr_day, fill = DroughtYear)) +
+  scale_fill_brewer(name="Drought Year", palette = "Dark2", labels=c("Wet years", "First/only dry year","Second dry year","Three or more dry years")) +
+  geom_histogram(position = "identity", alpha = 0.4, bins = 100)  +
+  facet_grid(WY~.)
+
+ggsave("Sherwood WR hist by WY.tiff", device = "tiff", width = 6, height = 25, units = "in")
+
+
+# grouped boxplot
+
+# Sherwood Harbor, multiple runs
+Trawl2.expanded[(Trawl2.expanded$Species %in% c("Winter-run Chinook salmon","Spring-run Chinook salmon","Fall-run Chinook salmon") & Trawl2.expanded$Location %in% c("Sherwood Harbor")),] %>%
+  mutate(across(Location, factor, levels=c("Sherwood Harbor"#,"Chipps Island"
+  ))) %>%
+  
+  ggplot(aes(x=Species, y=wtr_day, fill=DroughtYear)) + 
+  geom_boxplot()
+# BUT this is lumping all years together (for years in the same drought group)... i.e., in the current plot a year with a lot of outmigrants could swamp out patterns from lower years
+# really want to average across years in same group...
+
+# let's do boxplots by year to see general variation...
+
+# Sherwood Harbor, winter-run
+Trawl2.expanded[(Trawl2.expanded$Species %in% c("Winter-run Chinook salmon"#,"Spring-run Chinook salmon","Fall-run Chinook salmon"
+) & Trawl2.expanded$Location %in% c("Sherwood Harbor")),] %>%
+  mutate(across(Location, factor, levels=c("Sherwood Harbor"#,"Chipps Island"
+  ))) %>%
+  
+  ggplot(aes(x=as.factor(WY), y=wtr_day, fill=DroughtYear)) + 
+  geom_boxplot()
