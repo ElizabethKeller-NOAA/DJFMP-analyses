@@ -1,5 +1,8 @@
 library(here)
 library(dplyr)
+library(tidyr)
+library(lubridate)
+library(ggplot2)
 ## ######################
 # regression or ANOVAs? #
 #########################
@@ -69,6 +72,8 @@ dataset <- dataset %>%
 # error because one line has no dates (Sherwood steelhead in brood year 2016)
 
 # Add water year type & drought period year type
+#DroughtYr <- read.csv("yearassignments.csv") # in Drought salmonids.R
+#colnames(DroughtYr)[1] <- "WY"
 dataset <- left_join(dataset,DroughtYr[,c(1:5)], by="WY")
 
 #remove 2022
@@ -148,36 +153,49 @@ outlier2 <- dataset %>%
 
 model1  <- lm(X50_wtr_day ~ Species*Location*DroughtYear, data = dataset)
 # Create a QQ plot of residuals
-ggqqplot(residuals(model)) # **issue with this package loading... :(
+ggqqplot(residuals(model1)) # **issue with this package loading... :(
 # Compute Shapiro-Wilk test of normality
-shapiro_test(residuals(model))
+shapiro_test(residuals(model1))
 
 model2 <- lm(DurationMiddle50.Days ~ Species*Location*DroughtYear, data = dataset)
 # Create a QQ plot of residuals
-ggqqplot(residuals(model))
+ggqqplot(residuals(model2))
 # Compute Shapiro-Wilk test of normality
-shapiro_test(residuals(model))
+shapiro_test(residuals(model2))
 
+# ** NEITHER LOOK NORMAL
 
 # Check normality assumption by groups. Computing Shapiro-Wilk test for each combinations of factor levels.
 
-headache %>%
-  group_by(gender, risk, treatment) %>%
-  shapiro_test(pain_score)
+dataset %>%
+  group_by(Species, Location, DroughtYear) %>%
+  shapiro_test(X50_wtr_day)
 
 # Create QQ plot for each cell of design:
 
-ggqqplot(headache, "pain_score", ggtheme = theme_bw()) +
-  facet_grid(gender + risk ~ treatment, labeller = "label_both")
+ggqqplot(dataset, "X50_wtr_day", ggtheme = theme_bw()) +
+  facet_grid(Species + Location ~ DroughtYear, labeller = "label_both")
+
+# errors after this point **
+
+dataset %>%
+  group_by(Species, Location, DroughtYear) %>%
+  shapiro_test(DurationMiddle50.Days)
+ggqqplot(dataset, "DurationMiddle50.Days", ggtheme = theme_bw()) +
+  facet_grid(Species + Location ~ DroughtYear, labeller = "label_both")
 
 # 4) Homogeneity of variances. The variance of the outcome variable should be equal in every cell of the design.
 
 # Levene’s test:
+
+dataset %>% levene_test(X50_wtr_day ~ Species*Location*DroughtYear)
 
 dataset %>% levene_test(DurationMiddle50.Days ~ Species*Location*DroughtYear)
 
 # ** Note that, if the above assumptions are not met there are a non-parametric alternative (Kruskal-Wallis test) to the one-way ANOVA.
 # Unfortunately, there are no non-parametric alternatives to the two-way and the three-way ANOVA. 
 # It’s also possible to perform robust ANOVA test using the WRS2 R package.
+
+
 
 # consider phenomix package later if have time
